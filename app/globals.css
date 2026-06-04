@@ -74,6 +74,32 @@ input::placeholder, textarea::placeholder { color: var(--text3); }
 textarea { resize: vertical; min-height: 88px; line-height: 1.5; }
 label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
 
+.legal-content {
+  color: var(--text2);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.legal-content h2 {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+  margin: 26px 0 8px;
+}
+
+.legal-content p {
+  margin: 0 0 14px;
+}
+
+.legal-content ul {
+  margin: 0 0 14px 20px;
+  padding: 0;
+}
+
+.legal-content li {
+  margin: 6px 0;
+}
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

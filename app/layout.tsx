@@ -4,8 +4,8 @@ import { LanguageProvider } from '@/components/LanguageProvider'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'JobProfile — каталог специалистов',
-  description: 'Публичные профили специалистов с резюме, портфолио и сертификатами.',
+  title: 'JobProfile - профили специалистов',
+  description: 'Публичные профили специалистов с резюме, портфолио, сертификатами и профессиональными ссылками.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

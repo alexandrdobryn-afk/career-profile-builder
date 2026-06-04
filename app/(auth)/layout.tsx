@@ -1,3 +1,4 @@
+import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       }}>
         {children}
       </main>
+      <SiteFooter />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 import { t } from '@/lib/i18n'
 import { getRequestLang } from '@/lib/i18n-server'
@@ -277,6 +278,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           )}
         </div>
       </main>
+      <SiteFooter />
     </div>
   )
 }

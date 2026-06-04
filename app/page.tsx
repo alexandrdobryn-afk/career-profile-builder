@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 import { getCurrentUser } from '@/lib/auth'
 import { t } from '@/lib/i18n'
@@ -169,6 +170,7 @@ export default async function HomePage({ searchParams }: Props) {
           </section>
         )}
       </main>
+      <SiteFooter />
     </div>
   )
 }
