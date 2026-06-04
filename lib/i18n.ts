@@ -104,6 +104,10 @@ export const dict = {
       register: 'Зарегистрироваться',
       noAccount: 'Нет аккаунта?',
       hasAccount: 'Уже есть аккаунт?',
+      or: 'или',
+      loginWithGoogle: 'Войти через Google',
+      registerWithGoogle: 'Зарегистрироваться через Google',
+      oauthError: 'Не удалось войти через Google. Проверьте доступ и попробуйте снова.',
     },
     legal: {
       privacyTitle: 'Политика конфиденциальности',
@@ -275,6 +279,10 @@ export const dict = {
       register: 'Зареєструватися',
       noAccount: 'Немає акаунта?',
       hasAccount: 'Вже є акаунт?',
+      or: 'або',
+      loginWithGoogle: 'Увійти через Google',
+      registerWithGoogle: 'Зареєструватися через Google',
+      oauthError: 'Не вдалося увійти через Google. Перевірте доступ і спробуйте ще раз.',
     },
     legal: {
       privacyTitle: 'Політика конфіденційності',
@@ -446,6 +454,10 @@ export const dict = {
       register: 'Register',
       noAccount: 'No account?',
       hasAccount: 'Already have an account?',
+      or: 'or',
+      loginWithGoogle: 'Sign in with Google',
+      registerWithGoogle: 'Register with Google',
+      oauthError: 'Google sign in failed. Check access and try again.',
     },
     legal: {
       privacyTitle: 'Privacy Policy',

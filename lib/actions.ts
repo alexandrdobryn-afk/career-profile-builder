@@ -22,7 +22,7 @@ type OwnedProfile = { id: string; public_slug: string }
 const MAX_PROJECT_FILES = 5
 
 export async function registerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const email = (formData.get('email') as string)?.trim()
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
   const confirm = formData.get('confirm') as string
 
@@ -44,7 +44,7 @@ export async function registerAction(_prev: ActionResult, formData: FormData): P
 }
 
 export async function loginAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  const email = (formData.get('email') as string)?.trim()
+  const email = (formData.get('email') as string)?.trim().toLowerCase()
   const password = formData.get('password') as string
 
   if (!email || !password) return { error: 'Fill in all fields' }
@@ -57,6 +57,8 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
   )
 
   if (!user) return { error: 'Invalid email or password' }
+
+  if (!user.password_hash.startsWith('$2')) return { error: 'Use Google sign in for this account' }
 
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return { error: 'Invalid email or password' }

@@ -35,6 +35,11 @@ async function initSchema(db: Client) {
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      auth_provider TEXT NOT NULL DEFAULT 'password',
+      provider_user_id TEXT,
+      display_name TEXT DEFAULT '',
+      avatar_url TEXT DEFAULT '',
+      email_verified INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -138,6 +143,11 @@ async function initSchema(db: Client) {
     );
   `)
 
+  await ensureColumn(db, 'users', 'auth_provider', "TEXT NOT NULL DEFAULT 'password'")
+  await ensureColumn(db, 'users', 'provider_user_id', 'TEXT')
+  await ensureColumn(db, 'users', 'display_name', "TEXT DEFAULT ''")
+  await ensureColumn(db, 'users', 'avatar_url', "TEXT DEFAULT ''")
+  await ensureColumn(db, 'users', 'email_verified', 'INTEGER NOT NULL DEFAULT 0')
   await ensureColumn(db, 'career_profiles', 'public_slug', 'TEXT')
   await ensureColumn(db, 'career_profiles', 'is_public', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'career_profiles', 'location', "TEXT DEFAULT ''")
@@ -150,6 +160,7 @@ async function initSchema(db: Client) {
   await backfillProfileLinks(db)
   await backfillProjectLinks(db)
   await backfillPublicSlugs(db)
+  await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_provider_id ON users(provider_user_id) WHERE provider_user_id IS NOT NULL')
   await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_career_profiles_public_slug ON career_profiles(public_slug)')
 }
 

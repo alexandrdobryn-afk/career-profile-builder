@@ -117,6 +117,15 @@ label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); 
   grid-row: 1 / span 10;
 }
 
+.google-auth-button {
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+
+.google-auth-button:hover {
+  border-color: var(--accent) !important;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   .page-shell,
   .dashboard-shell {
@@ -157,6 +166,10 @@ label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); 
   .topbar-actions button,
   .topbar-actions select {
     flex: 0 0 auto;
+  }
+
+  .google-auth-button {
+    min-height: 48px !important;
   }
 
   .section-toolbar {

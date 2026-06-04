@@ -20,7 +20,7 @@ Visitors can search specialists, open a public profile link, view the portfolio 
 | Frontend | Next.js 16, React 19, TypeScript |
 | Backend | Next.js Server Actions, API routes |
 | Database | Turso/libSQL via `@libsql/client` |
-| Auth | JWT httpOnly cookies, bcryptjs |
+| Auth | JWT httpOnly cookies, bcryptjs, Google OAuth |
 | Files | Private Vercel Blob storage |
 | Deployment | Vercel |
 
@@ -45,9 +45,18 @@ JWT_SECRET=change-this-to-a-random-secret-at-least-32-characters
 TURSO_DATABASE_URL=libsql://your-database-name-your-org.turso.io
 TURSO_AUTH_TOKEN=your-turso-token
 BLOB_READ_WRITE_TOKEN=your-vercel-blob-read-write-token
+NEXT_PUBLIC_APP_URL=https://your-project.vercel.app
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
 ```
 
 `JWT_SECRET` must be at least 32 characters and must not use the default placeholder in production.
+
+`NEXT_PUBLIC_APP_URL` must match the deployed app origin without a trailing slash. For Google OAuth, add this redirect URI in Google Cloud:
+
+```text
+https://your-project.vercel.app/api/auth/google/callback
+```
 
 ## Turso Setup
 
