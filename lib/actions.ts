@@ -19,6 +19,7 @@ import {
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 type OwnedProfile = { id: string; public_slug: string }
+const MAX_PROJECT_FILES = 5
 
 export async function registerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const email = (formData.get('email') as string)?.trim()
@@ -362,11 +363,9 @@ export async function createProjectAction(_prev: ActionResult, formData: FormDat
   const profile = await getOwnedProfile(db, profileId, session.userId)
   if (!profile) return { error: 'Profile not found' }
 
-  const file = formData.get('file') as File
-  if (file && file.size > 0) {
-    const validationError = validateFile(file, 'project')
-    if (validationError) return { error: validationError }
-  }
+  const files = getProjectFiles(formData)
+  const fileValidationError = validateProjectFiles(files)
+  if (fileValidationError) return { error: fileValidationError }
 
   const id = generateId()
   const links = collectProjectLinks(formData)
@@ -391,9 +390,9 @@ export async function createProjectAction(_prev: ActionResult, formData: FormDat
     ...projectLinkStatements(session.userId, id, links.items),
   ])
 
-  if (file && file.size > 0) {
+  for (const file of files) {
     const dirPath = getProjectPath(session.userId, profileId, id)
-    const filePath = await saveFile(file, dirPath, 'content')
+    const filePath = await saveFile(file, dirPath, `content-${generateId()}`)
     await run(db, `
       INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -424,10 +423,17 @@ export async function updateProjectAction(_prev: ActionResult, formData: FormDat
   `, [projectId, session.userId])
   if (!project) return { error: 'Project not found' }
 
-  const file = formData.get('file') as File
-  if (file && file.size > 0) {
-    const validationError = validateFile(file, 'project')
-    if (validationError) return { error: validationError }
+  const files = getProjectFiles(formData)
+  const fileValidationError = validateProjectFiles(files)
+  if (fileValidationError) return { error: fileValidationError }
+
+  const deleteFileIds = collectDeleteFileIds(formData)
+  const existingFiles = await getProjectFileRecords(db, projectId, session.userId)
+  const deleteFileIdSet = new Set(deleteFileIds)
+  const ownedDeleteFiles = existingFiles.filter(file => deleteFileIdSet.has(file.id))
+  const remainingFileCount = existingFiles.length - ownedDeleteFiles.length
+  if (remainingFileCount + files.length > MAX_PROJECT_FILES) {
+    return { error: `A project can have up to ${MAX_PROJECT_FILES} files.` }
   }
 
   const links = collectProjectLinks(formData)
@@ -453,20 +459,21 @@ export async function updateProjectAction(_prev: ActionResult, formData: FormDat
     ...projectLinkStatements(session.userId, projectId, links.items),
   ])
 
-  if (file && file.size > 0) {
+  if (ownedDeleteFiles.length > 0) {
+    await Promise.all(ownedDeleteFiles.map(file => deleteDirectory(file.file_path)))
+    await batch(db, ownedDeleteFiles.map(file => ({
+      sql: 'DELETE FROM project_files WHERE id = ? AND user_id = ?',
+      args: [file.id, session.userId],
+    })))
+  }
+
+  for (const file of files) {
     const dirPath = getProjectPath(session.userId, profileId, projectId)
-    await deleteDirectory(dirPath)
-    const filePath = await saveFile(file, dirPath, 'content')
-    await batch(db, [
-      { sql: 'DELETE FROM project_files WHERE project_id = ?', args: [projectId] },
-      {
-        sql: `
-          INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `,
-        args: [generateId(), session.userId, projectId, filePath, file.name, file.type],
-      },
-    ])
+    const filePath = await saveFile(file, dirPath, `content-${generateId()}`)
+    await run(db, `
+      INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [generateId(), session.userId, projectId, filePath, file.name, file.type])
   }
 
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -636,6 +643,47 @@ function projectLinkStatements(
     `,
     args: [generateId(), userId, projectId, link.label, link.url, link.sortOrder],
   }))
+}
+
+function getProjectFiles(formData: FormData): File[] {
+  return formData
+    .getAll('files')
+    .filter((file): file is File => file instanceof File && file.size > 0)
+}
+
+function validateProjectFiles(files: File[]): string | null {
+  if (files.length > MAX_PROJECT_FILES) return `A project can have up to ${MAX_PROJECT_FILES} files.`
+
+  for (const file of files) {
+    const validationError = validateFile(file, 'project')
+    if (validationError) return validationError
+  }
+
+  return null
+}
+
+function collectDeleteFileIds(formData: FormData): string[] {
+  const deleteFileCount = Number(formData.get('deleteFileCount') || 0)
+  const ids: string[] = []
+
+  for (let index = 0; index < deleteFileCount; index += 1) {
+    const id = (formData.get(`delete_file_id_${index}`) as string | null)?.trim()
+    if (id) ids.push(id)
+  }
+
+  return ids
+}
+
+async function getProjectFileRecords(
+  db: Awaited<ReturnType<typeof getDb>>,
+  projectId: string,
+  userId: string,
+): Promise<{ id: string; file_path: string }[]> {
+  const result = await db.execute({
+    sql: 'SELECT id, file_path FROM project_files WHERE project_id = ? AND user_id = ?',
+    args: [projectId, userId],
+  })
+  return result.rows as unknown as { id: string; file_path: string }[]
 }
 
 async function getOwnedProfile(db: Awaited<ReturnType<typeof getDb>>, profileId: string, userId: string): Promise<OwnedProfile | null> {

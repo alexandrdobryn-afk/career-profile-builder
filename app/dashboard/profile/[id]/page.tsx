@@ -154,8 +154,8 @@ export default async function ProfilePage({ params }: Props) {
             ) : (
               projects.map(project => {
                 const projSkills = project.skills ? project.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []
-                const imageFile = project.files?.find(file => file.file_type.startsWith('image/'))
-                const documentFile = project.files?.find(file => file.file_type === 'application/pdf')
+                const imageFiles = project.files?.filter(file => file.file_type.startsWith('image/')) || []
+                const documentFiles = project.files?.filter(file => file.file_type === 'application/pdf') || []
 
                 return (
                   <div key={project.id} style={{
@@ -164,22 +164,37 @@ export default async function ProfilePage({ params }: Props) {
                     padding: 16,
                     marginBottom: 10,
                   }}>
-                    {imageFile && (
+                    {imageFiles.length > 0 && (
                       <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: imageFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(130px, 1fr))',
+                        gap: 8,
                         marginBottom: 10,
-                        borderRadius: 'var(--radius-sm)',
-                        overflow: 'hidden',
-                        background: 'var(--surface2)',
-                        height: 160,
                       }}>
-                        <Image
-                          src={imageFile.public_url}
-                          alt={project.title}
-                          width={700}
-                          height={320}
-                          unoptimized
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                        {imageFiles.map(file => (
+                          <a
+                            key={file.id}
+                            href={file.public_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              borderRadius: 'var(--radius-sm)',
+                              overflow: 'hidden',
+                              background: 'var(--surface2)',
+                              height: 140,
+                              display: 'block',
+                            }}
+                          >
+                            <Image
+                              src={file.public_url}
+                              alt={file.file_name || project.title}
+                              width={700}
+                              height={320}
+                              unoptimized
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </a>
+                        ))}
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 12 }}>
@@ -225,7 +240,9 @@ export default async function ProfilePage({ params }: Props) {
                           {link.label}
                         </a>
                       ))}
-                      {documentFile && <a href={documentFile.public_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>PDF</a>}
+                      {documentFiles.map(file => (
+                        <a key={file.id} href={file.public_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>PDF</a>
+                      ))}
                     </div>
                   </div>
                 )

@@ -13,6 +13,13 @@ interface ProjectLinkData {
   url: string
 }
 
+interface ProjectFileData {
+  id: string
+  file_name: string
+  file_type: string
+  public_url: string
+}
+
 interface ProjectData {
   id: string
   title: string
@@ -21,6 +28,7 @@ interface ProjectData {
   skills: string
   project_url: string
   links?: ProjectLinkData[]
+  files?: ProjectFileData[]
 }
 
 const linkPresets = [
@@ -29,6 +37,8 @@ const linkPresets = [
   { label: 'Live demo', placeholder: 'https://example.com' },
   { label: 'Website', placeholder: 'https://example.com' },
 ]
+
+const maxProjectFiles = 5
 
 function getInitialLinks(project?: ProjectData): ProjectLinkData[] {
   if (!project) return []
@@ -45,9 +55,13 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
   const { copy } = useLanguage()
   const action = project ? updateProjectAction : createProjectAction
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
-  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([])
+  const [deletedFileIds, setDeletedFileIds] = useState<string[]>([])
   const [links, setLinks] = useState<ProjectLinkData[]>(getInitialLinks(project))
   const fileRef = useRef<HTMLInputElement>(null)
+  const visibleExistingFiles = (project?.files || []).filter(file => !deletedFileIds.includes(file.id))
+  const totalFiles = visibleExistingFiles.length + selectedFiles.length
+  const fileLimitReached = totalFiles >= maxProjectFiles
 
   function addLink(label = '', url = '') {
     setLinks(current => [...current, { label, url }])
@@ -61,6 +75,16 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
 
   function removeLink(index: number) {
     setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  function handleFileChange(files: FileList | null) {
+    const availableSlots = Math.max(0, maxProjectFiles - visibleExistingFiles.length)
+    const names = Array.from(files || []).map(file => file.name).slice(0, availableSlots)
+    setSelectedFiles(names)
+  }
+
+  function markFileForDelete(fileId: string) {
+    setDeletedFileIds(current => current.includes(fileId) ? current : [...current, fileId])
   }
 
   return (
@@ -79,6 +103,10 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
       <form action={formAction} encType="multipart/form-data">
         <input type="hidden" name="profileId" value={profileId} />
         <input type="hidden" name="linkCount" value={links.length} />
+        <input type="hidden" name="deleteFileCount" value={deletedFileIds.length} />
+        {deletedFileIds.map((fileId, index) => (
+          <input key={fileId} type="hidden" name={`delete_file_id_${index}`} value={fileId} />
+        ))}
         {project && <input type="hidden" name="projectId" value={project.id} />}
 
         <div style={{ marginBottom: 16 }}>
@@ -189,29 +217,75 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
 
         <div style={{ marginBottom: 20 }}>
           <label>{copy.dashboard.project.attachment}</label>
+          {visibleExistingFiles.length > 0 && (
+            <div style={{ display: 'grid', gap: 8, marginBottom: 10 }}>
+              {visibleExistingFiles.map(file => (
+                <div key={file.id} style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0,1fr) auto',
+                  gap: 8,
+                  alignItems: 'center',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '8px 10px',
+                  fontSize: 12,
+                }}>
+                  <a
+                    href={file.public_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {file.file_name}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => markFileForDelete(file.id)}
+                    style={{
+                      background: 'transparent',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--danger-text)',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      padding: '5px 10px',
+                    }}
+                  >
+                    {copy.dashboard.delete}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <input
             ref={fileRef}
             type="file"
-            name="file"
+            name="files"
             accept=".png,.jpg,.jpeg,.webp,.pdf"
+            multiple
             style={{ display: 'none' }}
-            onChange={e => setFilePreview(e.target.files?.[0]?.name || null)}
+            onChange={e => handleFileChange(e.target.files)}
           />
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
+            onClick={() => !fileLimitReached && fileRef.current?.click()}
+            disabled={fileLimitReached}
             style={{
               width: '100%', background: 'transparent',
               border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)',
-              padding: '14px', fontSize: 13, color: 'var(--text2)', cursor: 'pointer',
+              padding: '14px', fontSize: 13, color: 'var(--text2)', cursor: fileLimitReached ? 'not-allowed' : 'pointer',
               textAlign: 'center',
+              opacity: fileLimitReached ? .65 : 1,
             }}
           >
-            {filePreview
-              ? <span style={{ color: 'var(--success-text)' }}>{copy.dashboard.selectedFile}: {filePreview}</span>
+            {selectedFiles.length > 0
+              ? <span style={{ color: 'var(--success-text)' }}>{copy.dashboard.selectedFile}: {selectedFiles.join(', ')}</span>
               : <>{copy.dashboard.project.chooseFile} <span style={{ display: 'block', fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{copy.dashboard.project.fileHint}</span></>
             }
           </button>
+          <div style={{ fontSize: 11, color: fileLimitReached ? 'var(--warn-text)' : 'var(--text3)', marginTop: 6 }}>
+            {totalFiles}/{maxProjectFiles}
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>

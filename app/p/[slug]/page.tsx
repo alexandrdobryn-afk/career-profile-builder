@@ -131,8 +131,8 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 <div style={{ display: 'grid', gap: 14 }}>
                   {projects.map(project => {
                     const projectSkills = project.skills ? project.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []
-                    const imageFile = project.files?.find(file => file.file_type.startsWith('image/'))
-                    const pdfFile = project.files?.find(file => file.file_type === 'application/pdf')
+                    const imageFiles = project.files?.filter(file => file.file_type.startsWith('image/')) || []
+                    const pdfFiles = project.files?.filter(file => file.file_type === 'application/pdf') || []
 
                     return (
                       <article key={project.id} style={{
@@ -140,22 +140,37 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                         borderRadius: 'var(--radius)',
                         padding: 16,
                       }}>
-                        {imageFile && (
+                        {imageFiles.length > 0 && (
                           <div style={{
-                            height: 220,
-                            borderRadius: 'var(--radius-sm)',
-                            overflow: 'hidden',
-                            background: 'var(--surface2)',
+                            display: 'grid',
+                            gridTemplateColumns: imageFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))',
+                            gap: 8,
                             marginBottom: 12,
                           }}>
-                            <Image
-                              src={imageFile.public_url}
-                              alt={project.title}
-                              width={820}
-                              height={420}
-                              unoptimized
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
+                            {imageFiles.map(file => (
+                              <a
+                                key={file.id}
+                                href={file.public_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  height: 180,
+                                  borderRadius: 'var(--radius-sm)',
+                                  overflow: 'hidden',
+                                  background: 'var(--surface2)',
+                                  display: 'block',
+                                }}
+                              >
+                                <Image
+                                  src={file.public_url}
+                                  alt={file.file_name || project.title}
+                                  width={820}
+                                  height={420}
+                                  unoptimized
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                              </a>
+                            ))}
                           </div>
                         )}
                         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{project.title}</h2>
@@ -183,7 +198,9 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                               {link.label}
                             </a>
                           ))}
-                          {pdfFile && <a href={pdfFile.public_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{copy.public.openPdf}</a>}
+                          {pdfFiles.map(file => (
+                            <a key={file.id} href={file.public_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{copy.public.openPdf}</a>
+                          ))}
                         </div>
                       </article>
                     )
