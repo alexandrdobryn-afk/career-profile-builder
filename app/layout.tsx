@@ -15,7 +15,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang === 'uk' ? 'uk-UA' : lang} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <LanguageProvider>
+        <LanguageProvider initialLang={lang}>
           <ThemeProvider>{children}</ThemeProvider>
         </LanguageProvider>
       </body>
