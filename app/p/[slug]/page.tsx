@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
@@ -68,10 +67,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           alignItems: 'center',
         }}>
           <div>
-            <Link href={`/?lang=${lang}`} style={{ color: 'var(--text3)', textDecoration: 'none', fontSize: 13 }}>
-              {copy.public.back}
-            </Link>
-            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.6px', marginTop: 16, marginBottom: 6 }}>{name}</h1>
+            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.6px', marginBottom: 6 }}>{name}</h1>
             <div style={{ fontSize: 16, color: 'var(--accent)', fontWeight: 700, marginBottom: 6 }}>{profile.title}</div>
             {profile.role && <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 6 }}>{profile.role}</div>}
             {profile.location && <div style={{ fontSize: 13, color: 'var(--text3)' }}>{profile.location}</div>}
