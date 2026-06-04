@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { ProjectImageGallery } from '@/components/ProjectImageGallery'
+import { PublicPortfolio } from '@/components/PublicPortfolio'
 import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 import { t } from '@/lib/i18n'
@@ -127,57 +127,15 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
             )}
 
             {projects.length > 0 && (
-              <section id="portfolio" style={card}>
-                <div style={sectionTitle}>{copy.public.portfolio}</div>
-                <div style={{ display: 'grid', gap: 14 }}>
-                  {projects.map(project => {
-                    const projectSkills = project.skills ? project.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []
-                    const imageFiles = project.files?.filter(file => file.file_type.startsWith('image/')) || []
-                    const pdfFiles = project.files?.filter(file => file.file_type === 'application/pdf') || []
-
-                    return (
-                      <article key={project.id} style={{
-                        border: '0.5px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        padding: 16,
-                      }}>
-                        {imageFiles.length > 0 && (
-                          <ProjectImageGallery images={imageFiles} title={project.title} />
-                        )}
-                        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{project.title}</h2>
-                        {project.role && <div style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{project.role}</div>}
-                        {project.description && <p style={{ color: 'var(--text2)', fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>{project.description}</p>}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
-                          {projectSkills.map(skill => (
-                            <span key={skill} style={{
-                              fontSize: 11,
-                              background: 'var(--surface2)',
-                              border: '0.5px solid var(--border)',
-                              color: 'var(--text2)',
-                              padding: '4px 9px',
-                              borderRadius: 20,
-                            }}>{skill}</span>
-                          ))}
-                          {project.links?.map(link => (
-                            <a
-                              key={link.id}
-                              href={link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}
-                            >
-                              {link.label}
-                            </a>
-                          ))}
-                          {pdfFiles.map(file => (
-                            <a key={file.id} href={file.public_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{copy.public.openPdf}</a>
-                          ))}
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
-              </section>
+              <PublicPortfolio
+                projects={projects}
+                labels={{
+                  title: copy.public.portfolio,
+                  showAll: copy.public.showAllProjects,
+                  collapse: copy.public.collapseProjects,
+                  openPdf: copy.public.openPdf,
+                }}
+              />
             )}
 
             {certificates.length > 0 && (
