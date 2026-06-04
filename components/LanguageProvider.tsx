@@ -18,6 +18,8 @@ const LanguageContext = createContext<{
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>(() => {
     if (typeof document === 'undefined') return defaultLang
+    const urlLang = new URLSearchParams(window.location.search).get('lang')
+    if (urlLang) return normalizeLang(urlLang)
     const cookieLang = document.cookie
       .split('; ')
       .find(row => row.startsWith('lang='))

@@ -14,6 +14,34 @@ export function normalizeLang(value?: string | null): Lang {
   return defaultLang
 }
 
+export function isSupportedLang(value?: string | null): value is Lang {
+  return value === 'en' || value === 'uk' || value === 'ru'
+}
+
+export function detectLangFromCountry(country?: string | null): Lang | null {
+  const code = country?.trim().toUpperCase()
+  if (code === 'UA') return 'uk'
+  if (code === 'RU') return 'ru'
+  return null
+}
+
+export function detectLangFromAcceptLanguage(value?: string | null): Lang | null {
+  if (!value) return null
+
+  const preferences = value
+    .split(',')
+    .map(item => item.trim().split(';')[0]?.toLowerCase())
+    .filter(Boolean)
+
+  for (const preference of preferences) {
+    if (preference === 'uk' || preference.startsWith('uk-') || preference === 'ua') return 'uk'
+    if (preference === 'ru' || preference.startsWith('ru-')) return 'ru'
+    if (preference === 'en' || preference.startsWith('en-')) return 'en'
+  }
+
+  return null
+}
+
 export const dict = {
   ru: {
     nav: {
@@ -72,6 +100,12 @@ export const dict = {
       register: 'Зарегистрироваться',
       noAccount: 'Нет аккаунта?',
       hasAccount: 'Уже есть аккаунт?',
+    },
+    legal: {
+      privacyTitle: 'Политика конфиденциальности',
+      termsTitle: 'Правила пользования',
+      updated: 'Последнее обновление',
+      backHome: '← На главную',
     },
   },
   uk: {
@@ -132,6 +166,12 @@ export const dict = {
       noAccount: 'Немає акаунта?',
       hasAccount: 'Вже є акаунт?',
     },
+    legal: {
+      privacyTitle: 'Політика конфіденційності',
+      termsTitle: 'Правила користування',
+      updated: 'Останнє оновлення',
+      backHome: '← На головну',
+    },
   },
   en: {
     nav: {
@@ -190,6 +230,12 @@ export const dict = {
       register: 'Register',
       noAccount: 'No account?',
       hasAccount: 'Already have an account?',
+    },
+    legal: {
+      privacyTitle: 'Privacy Policy',
+      termsTitle: 'Terms of Use',
+      updated: 'Last updated',
+      backHome: '← Home',
     },
   },
 } as const

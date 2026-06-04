@@ -1,18 +1,22 @@
 import Link from 'next/link'
 import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
+import { Lang, t } from '@/lib/i18n'
 
-export function LegalPage({ title, updatedAt, children }: {
+export function LegalPage({ lang, title, updatedAt, children }: {
+  lang: Lang
   title: string
   updatedAt: string
   children: React.ReactNode
 }) {
+  const copy = t(lang)
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Topbar showAuth />
       <main style={{ flex: 1, maxWidth: 860, width: '100%', margin: '0 auto', padding: '34px 24px' }}>
-        <Link href="/" style={{ color: 'var(--text3)', textDecoration: 'none', fontSize: 13 }}>
-          ← На главную
+        <Link href={`/?lang=${lang}`} style={{ color: 'var(--text3)', textDecoration: 'none', fontSize: 13 }}>
+          {copy.legal.backHome}
         </Link>
         <article style={{
           background: 'var(--surface)',
@@ -25,7 +29,7 @@ export function LegalPage({ title, updatedAt, children }: {
             {title}
           </h1>
           <p style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 24 }}>
-            Последнее обновление: {updatedAt}
+            {copy.legal.updated}: {updatedAt}
           </p>
           <div className="legal-content">
             {children}

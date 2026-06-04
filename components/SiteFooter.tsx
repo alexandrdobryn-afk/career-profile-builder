@@ -1,6 +1,11 @@
+'use client'
+
 import Link from 'next/link'
+import { useLanguage } from './LanguageProvider'
 
 export function SiteFooter() {
+  const { lang, copy } = useLanguage()
+
   return (
     <footer style={{
       borderTop: '0.5px solid var(--border)',
@@ -21,8 +26,8 @@ export function SiteFooter() {
       }}>
         <span>© {new Date().getFullYear()} JobProfile</span>
         <nav style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <Link href="/privacy" style={footerLinkStyle}>Политика конфиденциальности</Link>
-          <Link href="/terms" style={footerLinkStyle}>Правила пользования</Link>
+          <Link href={`/privacy?lang=${lang}`} style={footerLinkStyle}>{copy.legal.privacyTitle}</Link>
+          <Link href={`/terms?lang=${lang}`} style={footerLinkStyle}>{copy.legal.termsTitle}</Link>
         </nav>
       </div>
     </footer>
