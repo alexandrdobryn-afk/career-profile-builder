@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { saveProfileLinksAction } from '@/lib/actions'
 import type { ProfileLink } from '@/lib/queries'
+import { useLanguage } from './LanguageProvider'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 
@@ -16,6 +17,7 @@ interface EditableLink {
 const presets = ['LinkedIn', 'GitHub', 'YouTube', 'Facebook']
 
 export function ProfileLinksManager({ profileId, links }: { profileId: string; links: ProfileLink[] }) {
+  const { copy } = useLanguage()
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(saveProfileLinksAction, undefined)
   const [items, setItems] = useState<EditableLink[]>(
     links.length > 0
@@ -65,7 +67,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
           letterSpacing: '.5px',
           color: 'var(--text3)',
         }}>
-          Ссылки
+          {copy.dashboard.links}
         </div>
         <button type="button" onClick={() => addItem()} style={{
           background: 'var(--accent)',
@@ -77,7 +79,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
           fontSize: 20,
           lineHeight: 1,
           cursor: 'pointer',
-        }} aria-label="Добавить ссылку">
+        }} aria-label={copy.dashboard.addLink}>
           +
         </button>
       </div>
@@ -119,7 +121,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
           fontSize: 12,
           marginBottom: 10,
         }}>
-          Ссылки сохранены
+          {copy.dashboard.linksSaved}
         </div>
       )}
 
@@ -157,7 +159,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
                   width: 34,
                   height: 34,
                   cursor: 'pointer',
-                }} aria-label="Удалить ссылку">
+                }} aria-label={copy.dashboard.deleteLink}>
                   ×
                 </button>
               </div>
@@ -178,7 +180,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
                   onChange={event => updateItem(item.key, { isPublic: event.target.checked })}
                   style={{ width: 15, height: 15, padding: 0 }}
                 />
-                Показывать на публичной странице
+                {copy.dashboard.showPublic}
               </label>
             </div>
           ))}
@@ -195,7 +197,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
           fontWeight: 700,
           cursor: 'pointer',
         }}>
-          {pending ? 'Сохранение...' : 'Сохранить ссылки'}
+          {pending ? copy.dashboard.saving : copy.dashboard.saveLinks}
         </button>
       </form>
     </div>

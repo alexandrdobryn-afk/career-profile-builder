@@ -2,10 +2,12 @@
 
 import { useActionState, useRef, useState } from 'react'
 import { createCertificateAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 
 export function CertificateForm({ profileId }: { profileId: string }) {
+  const { copy } = useLanguage()
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(createCertificateAction, undefined)
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -32,34 +34,34 @@ export function CertificateForm({ profileId }: { profileId: string }) {
           background: 'var(--success-bg)', color: 'var(--success-text)',
           padding: '8px 12px', borderRadius: 'var(--radius-sm)',
           fontSize: 12, marginBottom: 12,
-        }}>Сертификат добавлен</div>
+        }}>{copy.dashboard.certificate.added}</div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ marginBottom: 12 }}>
-          <label>Название *</label>
+          <label>{copy.dashboard.certificate.title}</label>
           <input name="title" required placeholder="AI Automation Certificate" />
         </div>
         <div style={{ marginBottom: 12 }}>
-          <label>Кто выдал</label>
+          <label>{copy.dashboard.certificate.issuer}</label>
           <input name="issuer" placeholder="Coursera, Google, Mate Academy" />
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ marginBottom: 12 }}>
-          <label>Дата</label>
+          <label>{copy.dashboard.certificate.date}</label>
           <input type="month" name="issued_at" />
         </div>
         <div style={{ marginBottom: 12 }}>
-          <label>Ссылка</label>
+          <label>{copy.dashboard.certificate.link}</label>
           <input type="url" name="credential_url" placeholder="https://..." />
         </div>
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <label>Описание</label>
-        <textarea name="description" placeholder="Что подтверждает сертификат." />
+        <label>{copy.dashboard.certificate.description}</label>
+        <textarea name="description" placeholder={copy.dashboard.certificate.descriptionPlaceholder} />
       </div>
 
       <input
@@ -81,14 +83,14 @@ export function CertificateForm({ profileId }: { profileId: string }) {
             fontSize: 13, color: 'var(--text2)', cursor: 'pointer',
           }}
         >
-          {filePreview || 'Прикрепить файл'}
+          {filePreview || copy.dashboard.certificate.attachFile}
         </button>
         <button type="submit" disabled={pending} style={{
           background: 'var(--accent)', color: '#fff', border: 'none',
           borderRadius: 'var(--radius-sm)', padding: '8px 18px',
           fontSize: 13, fontWeight: 500, cursor: 'pointer',
         }}>
-          {pending ? 'Добавление...' : 'Добавить сертификат'}
+          {pending ? copy.dashboard.certificate.adding : copy.dashboard.certificate.add}
         </button>
       </div>
     </form>

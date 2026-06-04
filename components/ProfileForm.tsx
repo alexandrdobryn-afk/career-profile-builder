@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { createProfileAction, updateProfileAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 
@@ -22,6 +23,7 @@ interface Profile {
 }
 
 export function ProfileForm({ profile }: { profile?: Profile }) {
+  const { copy } = useLanguage()
   const action = profile ? updateProfileAction : createProfileAction
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
 
@@ -43,7 +45,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 12, alignItems: 'end', marginBottom: 16 }}>
           <div>
-            <label>Название профиля *</label>
+            <label>{copy.dashboard.profileTitle}</label>
             <input name="title" required placeholder="AI Automation Developer" defaultValue={profile?.title} />
           </div>
           <label style={{
@@ -58,12 +60,12 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
               defaultChecked={profile ? profile.is_public === 1 : true}
               style={{ width: 16, height: 16, padding: 0 }}
             />
-            Публиковать
+            {copy.dashboard.publish}
           </label>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Публичная ссылка</label>
+          <label>{copy.dashboard.publicLink}</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
             <span style={{
               background: 'var(--surface2)', border: '0.5px solid var(--border)',
@@ -81,37 +83,37 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ marginBottom: 16 }}>
-            <label>Имя</label>
-            <input name="first_name" placeholder="Иван" defaultValue={profile?.first_name} />
+            <label>{copy.dashboard.firstName}</label>
+            <input name="first_name" placeholder="Ivan" defaultValue={profile?.first_name} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label>Фамилия</label>
-            <input name="last_name" placeholder="Иванов" defaultValue={profile?.last_name} />
+            <label>{copy.dashboard.lastName}</label>
+            <input name="last_name" placeholder="Dobryn" defaultValue={profile?.last_name} />
           </div>
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Роль / специализация</label>
+          <label>{copy.dashboard.role}</label>
           <input name="role" placeholder="AI Engineer, Automation Specialist" defaultValue={profile?.role} />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Краткое описание</label>
-          <textarea name="bio" placeholder="Чем вы занимаетесь, какие задачи решаете, чем полезны клиенту или работодателю." defaultValue={profile?.bio} />
+          <label>{copy.dashboard.bio}</label>
+          <textarea name="bio" placeholder={copy.dashboard.bioPlaceholder} defaultValue={profile?.bio} />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Навыки через запятую</label>
+          <label>{copy.dashboard.skillsComma}</label>
           <input name="skills" placeholder="Python, OpenAI API, Make.com, FastAPI" defaultValue={profile?.skills} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ marginBottom: 20 }}>
-            <label>Локация</label>
+            <label>{copy.dashboard.location}</label>
             <input name="location" placeholder="Kyiv / Remote" defaultValue={profile?.location} />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label>Контактный email</label>
+            <label>{copy.dashboard.contactEmail}</label>
             <input type="email" name="contact_email" placeholder="you@example.com" defaultValue={profile?.contact_email} />
           </div>
         </div>
@@ -122,14 +124,14 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
             borderRadius: 'var(--radius-sm)', fontSize: 14, color: 'var(--text2)',
             textDecoration: 'none',
           }}>
-            Отмена
+            {copy.dashboard.cancel}
           </Link>
           <button type="submit" disabled={pending} style={{
             background: 'var(--accent)', color: '#fff', border: 'none',
             padding: '9px 24px', borderRadius: 'var(--radius-sm)',
             fontSize: 14, fontWeight: 500, cursor: 'pointer',
           }}>
-            {pending ? 'Сохранение...' : profile ? 'Сохранить изменения' : 'Создать профиль'}
+            {pending ? copy.dashboard.saving : profile ? copy.dashboard.saveChanges : copy.dashboard.createProfile}
           </button>
         </div>
       </form>

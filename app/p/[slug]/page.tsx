@@ -259,7 +259,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
 
               {links.length > 0 && (
                 <section style={card}>
-                  <div style={sectionTitle}>Ссылки</div>
+                  <div style={sectionTitle}>{copy.dashboard.links}</div>
                   <div style={{ display: 'grid', gap: 8 }}>
                     {links.map(link => (
                       <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" style={{

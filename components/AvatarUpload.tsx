@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useRef, useState, useTransition } from 'react'
 import { deleteAvatarAction, uploadAvatarAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 interface AvatarUploadProps {
   profileId: string
@@ -10,6 +11,7 @@ interface AvatarUploadProps {
 }
 
 export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
+  const { copy } = useLanguage()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -30,7 +32,7 @@ export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
   }
 
   const handleDelete = () => {
-    if (!window.confirm('Удалить фото профиля?')) return
+    if (!window.confirm(copy.dashboard.deletePhotoConfirm)) return
 
     setError(null)
     startTransition(async () => {
@@ -64,14 +66,14 @@ export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
           {currentAvatar ? (
             <Image
               src={currentAvatar.url}
-              alt="Фото профиля"
+              alt={copy.dashboard.profilePhoto}
               width={96}
               height={96}
               unoptimized
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
-            'Фото'
+            copy.dashboard.photo
           )}
         </div>
 
@@ -104,7 +106,7 @@ export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
             fontWeight: 700,
             cursor: 'pointer',
           }}>
-            {pending ? 'Загрузка...' : currentAvatar ? 'Заменить фото' : 'Загрузить фото'}
+            {pending ? copy.dashboard.uploading : currentAvatar ? copy.dashboard.replacePhoto : copy.dashboard.uploadPhoto}
           </button>
           {currentAvatar && (
             <button type="button" disabled={pending} onClick={handleDelete} style={{
@@ -116,14 +118,14 @@ export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
               fontSize: 12,
               cursor: 'pointer',
             }}>
-              Удалить фото
+              {copy.dashboard.deletePhoto}
             </button>
           )}
         </div>
       </div>
 
       <div style={{ color: 'var(--text3)', fontSize: 11, marginTop: 10 }}>
-        PNG, JPG, GIF или WebP до 2 МБ. Лучше квадратное фото около 500×500 px.
+        {copy.dashboard.avatarHint}
       </div>
 
       {error && (

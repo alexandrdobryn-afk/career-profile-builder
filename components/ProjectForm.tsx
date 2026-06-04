@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useRef, useState } from 'react'
 import { createProjectAction, updateProjectAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 
@@ -41,6 +42,7 @@ function getInitialLinks(project?: ProjectData): ProjectLinkData[] {
 }
 
 export function ProjectForm({ profileId, project }: { profileId: string; project?: ProjectData }) {
+  const { copy } = useLanguage()
   const action = project ? updateProjectAction : createProjectAction
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
   const [filePreview, setFilePreview] = useState<string | null>(null)
@@ -80,31 +82,31 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
         {project && <input type="hidden" name="projectId" value={project.id} />}
 
         <div style={{ marginBottom: 16 }}>
-          <label>Название проекта *</label>
+          <label>{copy.dashboard.project.title}</label>
           <input name="title" required placeholder="FinVoice AI" defaultValue={project?.title} />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Ваша роль</label>
+          <label>{copy.dashboard.project.role}</label>
           <input name="role" placeholder="Lead Developer" defaultValue={project?.role} />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Описание проекта</label>
+          <label>{copy.dashboard.project.description}</label>
           <textarea
             name="description"
-            placeholder="Что сделано, какую проблему решает проект, какие результаты видны."
+            placeholder={copy.dashboard.project.descriptionPlaceholder}
             defaultValue={project?.description}
           />
         </div>
 
         <div style={{ marginBottom: 16 }}>
-          <label>Навыки и инструменты</label>
+          <label>{copy.dashboard.project.skills}</label>
           <input name="skills" placeholder="Python, OpenAI API, FastAPI" defaultValue={project?.skills} />
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <label>Ссылки проекта</label>
+          <label>{copy.dashboard.project.links}</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: links.length ? 12 : 10 }}>
             {linkPresets.map(preset => (
               <button
@@ -138,7 +140,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
                 padding: '6px 10px',
               }}
             >
-              + Другая ссылка
+              + {copy.dashboard.project.otherLink}
             </button>
           </div>
 
@@ -166,7 +168,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
                   <button
                     type="button"
                     onClick={() => removeLink(index)}
-                    aria-label="Удалить ссылку"
+                    aria-label={copy.dashboard.project.deleteLink}
                     style={{
                       background: 'transparent',
                       border: '0.5px solid var(--border)',
@@ -177,7 +179,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
                       padding: '0 12px',
                     }}
                   >
-                    Удалить
+                    {copy.dashboard.delete}
                   </button>
                 </div>
               ))}
@@ -186,7 +188,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label>Изображение или PDF для онлайн-просмотра</label>
+          <label>{copy.dashboard.project.attachment}</label>
           <input
             ref={fileRef}
             type="file"
@@ -206,8 +208,8 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
             }}
           >
             {filePreview
-              ? <span style={{ color: 'var(--success-text)' }}>Выбран файл: {filePreview}</span>
-              : <>Выбрать файл <span style={{ display: 'block', fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>PNG, JPG, WEBP, PDF до 10 МБ</span></>
+              ? <span style={{ color: 'var(--success-text)' }}>{copy.dashboard.selectedFile}: {filePreview}</span>
+              : <>{copy.dashboard.project.chooseFile} <span style={{ display: 'block', fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{copy.dashboard.project.fileHint}</span></>
             }
           </button>
         </div>
@@ -218,14 +220,14 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
             borderRadius: 'var(--radius-sm)', fontSize: 14, color: 'var(--text2)',
             textDecoration: 'none',
           }}>
-            Отмена
+            {copy.dashboard.cancel}
           </Link>
           <button type="submit" disabled={pending} style={{
             background: 'var(--accent)', color: '#fff', border: 'none',
             padding: '9px 24px', borderRadius: 'var(--radius-sm)',
             fontSize: 14, fontWeight: 500, cursor: 'pointer',
           }}>
-            {pending ? 'Сохранение...' : project ? 'Сохранить изменения' : 'Добавить проект'}
+            {pending ? copy.dashboard.saving : project ? copy.dashboard.saveChanges : copy.dashboard.project.add}
           </button>
         </div>
       </form>

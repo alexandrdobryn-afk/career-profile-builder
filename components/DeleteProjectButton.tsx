@@ -2,15 +2,17 @@
 
 import { useTransition } from 'react'
 import { deleteProjectAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 export function DeleteProjectButton({ projectId, profileId }: { projectId: string; profileId: string }) {
+  const { copy } = useLanguage()
   const [pending, startTransition] = useTransition()
 
   return (
     <button
       type="button"
       onClick={() => {
-        if (!confirm('Удалить проект?')) return
+        if (!confirm(copy.dashboard.deleteProjectConfirm)) return
         startTransition(async () => {
           await deleteProjectAction(projectId, profileId)
           window.location.reload()
@@ -27,7 +29,7 @@ export function DeleteProjectButton({ projectId, profileId }: { projectId: strin
         color: 'var(--danger-text)',
       }}
     >
-      {pending ? '...' : 'Удалить'}
+      {pending ? '...' : copy.dashboard.delete}
     </button>
   )
 }

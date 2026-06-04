@@ -9,6 +9,8 @@ import { DeleteCertificateButton } from '@/components/DeleteCertificateButton'
 import { DeleteProjectButton } from '@/components/DeleteProjectButton'
 import { ProfileLinksManager } from '@/components/ProfileLinksManager'
 import { ResumeUpload } from '@/components/ResumeUpload'
+import { t } from '@/lib/i18n'
+import { getRequestLang } from '@/lib/i18n-server'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -35,6 +37,8 @@ export default async function ProfilePage({ params }: Props) {
   const { id } = await params
   const session = await getCurrentUser()
   if (!session) redirect('/login')
+  const lang = await getRequestLang()
+  const copy = t(lang)
 
   const profile = getProfile(id, session.userId)
   if (!profile) notFound()
@@ -48,13 +52,13 @@ export default async function ProfilePage({ params }: Props) {
   const publicUrl = `/p/${profile.public_slug}`
 
   const resumeDate = profile.resume_uploaded_at
-    ? new Date(profile.resume_uploaded_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    ? new Date(profile.resume_uploaded_at).toLocaleDateString(copy.dashboard.locale, { day: 'numeric', month: 'long', year: 'numeric' })
     : null
 
   return (
     <>
       <div style={{ marginBottom: 20, fontSize: 13, color: 'var(--text3)' }}>
-        <Link href="/dashboard" style={{ color: 'var(--text2)', textDecoration: 'none' }}>Мои профили</Link>
+        <Link href="/dashboard" style={{ color: 'var(--text2)', textDecoration: 'none' }}>{copy.dashboard.myProfiles}</Link>
         <span style={{ margin: '0 6px' }}>/</span>
         <span style={{ color: 'var(--text)' }}>{profile.title}</span>
       </div>
@@ -85,7 +89,7 @@ export default async function ProfilePage({ params }: Props) {
                 textDecoration: 'none',
                 flexShrink: 0,
               }}>
-                Редактировать
+                {copy.dashboard.edit}
               </Link>
             </div>
 
@@ -97,7 +101,7 @@ export default async function ProfilePage({ params }: Props) {
               fontSize: 12,
               marginBottom: 14,
             }}>
-              {profile.is_public ? 'Профиль опубликован' : 'Профиль скрыт'}: <Link href={publicUrl} target="_blank" style={{ color: 'inherit', fontWeight: 700 }}>{publicUrl}</Link>
+              {profile.is_public ? copy.dashboard.profilePublished : copy.dashboard.profileHidden}: <Link href={publicUrl} target="_blank" style={{ color: 'inherit', fontWeight: 700 }}>{publicUrl}</Link>
             </div>
 
             {profile.bio && (
@@ -108,7 +112,7 @@ export default async function ProfilePage({ params }: Props) {
 
             {skillsList.length > 0 && (
               <>
-                <div style={sectionTitle}>Навыки</div>
+                <div style={sectionTitle}>{copy.dashboard.skills}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {skillsList.map(skill => (
                     <span key={skill} style={{
@@ -127,7 +131,7 @@ export default async function ProfilePage({ params }: Props) {
 
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={sectionTitle}>Портфолио</div>
+              <div style={sectionTitle}>{copy.dashboard.portfolio}</div>
               <Link href={`/dashboard/profile/${id}/project/new`} style={{
                 background: 'var(--accent)',
                 color: '#fff',
@@ -137,13 +141,13 @@ export default async function ProfilePage({ params }: Props) {
                 fontSize: 12,
                 fontWeight: 500,
               }}>
-                Добавить проект
+                {copy.dashboard.addProject}
               </Link>
             </div>
 
             {projects.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text3)', fontSize: 13 }}>
-                Проектов пока нет.
+                {copy.dashboard.noProjects}
               </div>
             ) : (
               projects.map(project => {
@@ -191,7 +195,7 @@ export default async function ProfilePage({ params }: Props) {
                           color: 'var(--text2)',
                           textDecoration: 'none',
                         }}>
-                          Изменить
+                          {copy.dashboard.change}
                         </Link>
                         <DeleteProjectButton projectId={project.id} profileId={id} />
                       </div>
@@ -230,7 +234,7 @@ export default async function ProfilePage({ params }: Props) {
           <ProfileLinksManager profileId={id} links={profileLinks} />
 
           <div style={card}>
-            <div style={sectionTitle}>Сертификаты</div>
+            <div style={sectionTitle}>{copy.dashboard.certificatesTitle}</div>
             {certificates.length > 0 && (
               <div style={{ display: 'grid', gap: 10 }}>
                 {certificates.map(certificate => (
@@ -250,8 +254,8 @@ export default async function ProfilePage({ params }: Props) {
                     </div>
                     {certificate.description && <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, marginTop: 8 }}>{certificate.description}</p>}
                     <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                      {certificate.credential_url && <a href={certificate.credential_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>Проверить</a>}
-                      {certificate.public_url && <a href={certificate.public_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>Файл</a>}
+                      {certificate.credential_url && <a href={certificate.credential_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>{copy.dashboard.verify}</a>}
+                      {certificate.public_url && <a href={certificate.public_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)' }}>{copy.dashboard.file}</a>}
                     </div>
                   </div>
                 ))}
@@ -263,7 +267,7 @@ export default async function ProfilePage({ params }: Props) {
 
         <aside>
           <div style={card}>
-            <div style={sectionTitle}>Фото профиля</div>
+            <div style={sectionTitle}>{copy.dashboard.profilePhoto}</div>
             <AvatarUpload
               profileId={id}
               currentAvatar={avatarUrl ? {
@@ -274,7 +278,7 @@ export default async function ProfilePage({ params }: Props) {
           </div>
 
           <div style={card}>
-            <div style={sectionTitle}>Резюме</div>
+            <div style={sectionTitle}>{copy.dashboard.resume}</div>
             <ResumeUpload
               profileId={id}
               currentResume={resumeUrl ? {
@@ -287,12 +291,12 @@ export default async function ProfilePage({ params }: Props) {
           </div>
 
           <div style={card}>
-            <div style={sectionTitle}>Информация</div>
+            <div style={sectionTitle}>{copy.dashboard.information}</div>
             {[
-              ['Статус', profile.is_public ? 'Публичный' : 'Скрытый'],
-              ['Проектов', String(projects.length)],
-              ['Сертификатов', String(certificates.length)],
-              ['Создан', new Date(profile.created_at).toLocaleDateString('ru-RU')],
+              [copy.dashboard.status, profile.is_public ? copy.dashboard.published : copy.dashboard.hidden],
+              [copy.dashboard.projects, String(projects.length)],
+              [copy.dashboard.certificates, String(certificates.length)],
+              [copy.dashboard.created, new Date(profile.created_at).toLocaleDateString(copy.dashboard.locale)],
             ].map(([label, value]) => (
               <div key={label} style={{
                 display: 'flex',

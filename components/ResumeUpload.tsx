@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { deleteResumeAction, setResumePublicAction, uploadResumeAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 interface ResumeUploadProps {
   profileId: string
@@ -9,6 +10,7 @@ interface ResumeUploadProps {
 }
 
 export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
+  const { copy } = useLanguage()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -33,7 +35,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
   }
 
   const handleDelete = () => {
-    if (!window.confirm('Удалить резюме?')) return
+    if (!window.confirm(copy.dashboard.deleteResumeConfirm)) return
 
     setError(null)
     startTransition(async () => {
@@ -123,7 +125,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
               onChange={event => handleVisibility(event.target.checked)}
               style={{ width: 15, height: 15, padding: 0, marginTop: 1 }}
             />
-            <span>Показывать резюме на публичной странице</span>
+            <span>{copy.dashboard.showResumePublic}</span>
           </label>
 
           <div style={{
@@ -142,7 +144,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
               textAlign: 'center',
               minWidth: 0,
             }}>
-              Открыть
+              {copy.dashboard.open}
             </a>
             <button type="button" disabled={pending} onClick={handleDelete} style={{
               background: 'transparent',
@@ -154,7 +156,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
               cursor: 'pointer',
               minWidth: 0,
             }}>
-              Удалить
+              {copy.dashboard.delete}
             </button>
           </div>
         </div>
@@ -195,7 +197,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}>
-              Выбран файл: {preview}
+              {copy.dashboard.selectedFile}: {preview}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" onClick={() => { setPreview(null); if (fileRef.current) fileRef.current.value = '' }}
@@ -208,7 +210,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
                   cursor: 'pointer',
                   color: 'var(--text2)',
                 }}>
-                Отмена
+                {copy.dashboard.cancel}
               </button>
               <button type="submit" disabled={pending} style={{
                 background: 'var(--accent)',
@@ -220,7 +222,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
                 fontWeight: 700,
                 cursor: 'pointer',
               }}>
-                {pending ? 'Загрузка...' : 'Загрузить'}
+                {pending ? copy.dashboard.uploading : copy.dashboard.upload}
               </button>
             </div>
           </div>
@@ -241,8 +243,8 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
               transition: 'border-color 0.15s, background 0.15s',
             }}
           >
-            {currentResume ? 'Загрузить новое резюме' : 'Загрузить резюме'}
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>PDF, HTML, DOCX, TXT до 10 МБ</div>
+            {currentResume ? copy.dashboard.uploadNewResume : copy.dashboard.uploadResume}
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{copy.dashboard.resumeHint}</div>
           </button>
         )}
       </form>

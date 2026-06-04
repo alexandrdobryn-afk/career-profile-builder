@@ -2,8 +2,10 @@
 
 import { useTransition } from 'react'
 import { deleteCertificateAction } from '@/lib/actions'
+import { useLanguage } from './LanguageProvider'
 
 export function DeleteCertificateButton({ certificateId, profileId }: { certificateId: string; profileId: string }) {
+  const { copy } = useLanguage()
   const [pending, startTransition] = useTransition()
 
   return (
@@ -11,7 +13,7 @@ export function DeleteCertificateButton({ certificateId, profileId }: { certific
       type="button"
       disabled={pending}
       onClick={() => {
-        if (!confirm('Удалить сертификат?')) return
+        if (!confirm(copy.dashboard.certificate.deleteConfirm)) return
         startTransition(() => {
           deleteCertificateAction(certificateId, profileId)
         })
@@ -26,7 +28,7 @@ export function DeleteCertificateButton({ certificateId, profileId }: { certific
         cursor: 'pointer',
       }}
     >
-      {pending ? 'Удаление...' : 'Удалить'}
+      {pending ? copy.dashboard.certificate.deleting : copy.dashboard.delete}
     </button>
   )
 }
