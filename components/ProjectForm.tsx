@@ -6,6 +6,12 @@ import { createProjectAction, updateProjectAction } from '@/lib/actions'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
 
+interface ProjectLinkData {
+  id?: string
+  label: string
+  url: string
+}
+
 interface ProjectData {
   id: string
   title: string
@@ -13,18 +19,52 @@ interface ProjectData {
   description: string
   skills: string
   project_url: string
+  links?: ProjectLinkData[]
+}
+
+const linkPresets = [
+  { label: 'GitHub', placeholder: 'https://github.com/...' },
+  { label: 'YouTube', placeholder: 'https://youtube.com/...' },
+  { label: 'Live demo', placeholder: 'https://example.com' },
+  { label: 'Website', placeholder: 'https://example.com' },
+]
+
+function getInitialLinks(project?: ProjectData): ProjectLinkData[] {
+  if (!project) return []
+  if (project.links?.length) {
+    return project.links.map(link => ({ id: link.id, label: link.label, url: link.url }))
+  }
+  if (project.project_url) {
+    return [{ label: 'Project', url: project.project_url }]
+  }
+  return []
 }
 
 export function ProjectForm({ profileId, project }: { profileId: string; project?: ProjectData }) {
   const action = project ? updateProjectAction : createProjectAction
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
   const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [links, setLinks] = useState<ProjectLinkData[]>(getInitialLinks(project))
   const fileRef = useRef<HTMLInputElement>(null)
+
+  function addLink(label = '', url = '') {
+    setLinks(current => [...current, { label, url }])
+  }
+
+  function updateLink(index: number, field: keyof ProjectLinkData, value: string) {
+    setLinks(current => current.map((link, itemIndex) => (
+      itemIndex === index ? { ...link, [field]: value } : link
+    )))
+  }
+
+  function removeLink(index: number) {
+    setLinks(current => current.filter((_, itemIndex) => itemIndex !== index))
+  }
 
   return (
     <div style={{
       background: 'var(--surface)', border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius)', padding: '24px', maxWidth: 640,
+      borderRadius: 'var(--radius)', padding: '24px', maxWidth: 720,
     }}>
       {state?.error && (
         <div style={{
@@ -36,6 +76,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
 
       <form action={formAction} encType="multipart/form-data">
         <input type="hidden" name="profileId" value={profileId} />
+        <input type="hidden" name="linkCount" value={links.length} />
         {project && <input type="hidden" name="projectId" value={project.id} />}
 
         <div style={{ marginBottom: 16 }}>
@@ -50,7 +91,11 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
 
         <div style={{ marginBottom: 16 }}>
           <label>Описание проекта</label>
-          <textarea name="description" placeholder="Что сделано, какую проблему решает проект, какие результаты видны." defaultValue={project?.description} />
+          <textarea
+            name="description"
+            placeholder="Что сделано, какую проблему решает проект, какие результаты видны."
+            defaultValue={project?.description}
+          />
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -58,9 +103,86 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
           <input name="skills" placeholder="Python, OpenAI API, FastAPI" defaultValue={project?.skills} />
         </div>
 
-        <div style={{ marginBottom: 16 }}>
-          <label>Ссылка на проект или видео</label>
-          <input type="url" name="project_url" placeholder="https://github.com/... или https://youtube.com/..." defaultValue={project?.project_url} />
+        <div style={{ marginBottom: 18 }}>
+          <label>Ссылки проекта</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: links.length ? 12 : 10 }}>
+            {linkPresets.map(preset => (
+              <button
+                key={preset.label}
+                type="button"
+                onClick={() => addLink(preset.label)}
+                style={{
+                  background: 'transparent',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--text2)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  padding: '6px 10px',
+                }}
+              >
+                + {preset.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => addLink()}
+              style={{
+                background: 'var(--surface2)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--text)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 700,
+                padding: '6px 10px',
+              }}
+            >
+              + Другая ссылка
+            </button>
+          </div>
+
+          {links.length > 0 && (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {links.map((link, index) => (
+                <div key={`${link.id || 'new'}-${index}`} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '150px minmax(0,1fr) auto',
+                  gap: 8,
+                  alignItems: 'center',
+                }}>
+                  <input
+                    name={`link_label_${index}`}
+                    placeholder="GitHub"
+                    value={link.label}
+                    onChange={event => updateLink(index, 'label', event.target.value)}
+                  />
+                  <input
+                    name={`link_url_${index}`}
+                    placeholder={linkPresets.find(preset => preset.label === link.label)?.placeholder || 'https://...'}
+                    value={link.url}
+                    onChange={event => updateLink(index, 'url', event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeLink(index)}
+                    aria-label="Удалить ссылку"
+                    style={{
+                      background: 'transparent',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--danger-text)',
+                      cursor: 'pointer',
+                      height: 38,
+                      padding: '0 12px',
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 20 }}>

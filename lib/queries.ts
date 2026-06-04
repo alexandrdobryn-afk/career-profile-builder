@@ -47,6 +47,7 @@ export interface Project {
   project_url: string
   created_at: string
   files?: ProjectFile[]
+  links?: ProjectLink[]
 }
 
 export interface ProjectFile {
@@ -55,6 +56,15 @@ export interface ProjectFile {
   file_name: string
   file_type: string
   public_url: string
+}
+
+export interface ProjectLink {
+  id: string
+  project_id: string
+  label: string
+  url: string
+  sort_order: number
+  created_at: string
 }
 
 export interface Certificate {
@@ -126,6 +136,8 @@ export function searchPublicProfiles(query?: string): Profile[] {
     'pp.title',
     'pp.description',
     'pp.skills',
+    'pjl.label',
+    'pjl.url',
     'c.title',
     'c.issuer',
     'c.description',
@@ -146,6 +158,7 @@ export function searchPublicProfiles(query?: string): Profile[] {
       COUNT(DISTINCT c.id) as certificate_count
     FROM career_profiles cp
     LEFT JOIN portfolio_projects pp ON pp.career_profile_id = cp.id
+    LEFT JOIN project_links pjl ON pjl.project_id = pp.id
     LEFT JOIN certificates c ON c.career_profile_id = cp.id
     LEFT JOIN profile_links pl ON pl.career_profile_id = cp.id AND pl.is_public = 1
     WHERE cp.is_public = 1
@@ -217,6 +230,11 @@ function attachProjectFiles(projects: Project[]): Project[] {
     ...project,
     files: (db.prepare('SELECT * FROM project_files WHERE project_id = ?').all(project.id) as Omit<ProjectFile, 'public_url'>[])
       .map(file => ({ ...file, public_url: getPublicFilePath(file.file_path) })),
+    links: db.prepare(`
+      SELECT * FROM project_links
+      WHERE project_id = ?
+      ORDER BY sort_order ASC, created_at ASC
+    `).all(project.id) as ProjectLink[],
   }))
 }
 

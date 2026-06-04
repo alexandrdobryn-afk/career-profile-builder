@@ -387,19 +387,26 @@ export async function createProjectAction(_prev: ActionResult, formData: FormDat
   }
 
   const id = generateId()
-  db.prepare(`
-    INSERT INTO portfolio_projects (id, user_id, career_profile_id, title, role, description, skills, project_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    session.userId,
-    profileId,
-    title,
-    (formData.get('role') as string) || '',
-    (formData.get('description') as string) || '',
-    (formData.get('skills') as string) || '',
-    (formData.get('project_url') as string) || '',
-  )
+  const links = collectProjectLinks(formData)
+  if (links.error) return { error: links.error }
+
+  const transaction = db.transaction(() => {
+    db.prepare(`
+      INSERT INTO portfolio_projects (id, user_id, career_profile_id, title, role, description, skills, project_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, '')
+    `).run(
+      id,
+      session.userId,
+      profileId,
+      title,
+      (formData.get('role') as string) || '',
+      (formData.get('description') as string) || '',
+      (formData.get('skills') as string) || '',
+    )
+
+    insertProjectLinks(db, session.userId, id, links.items)
+  })
+  transaction()
 
   if (file && file.size > 0) {
     const dirPath = getProjectPath(session.userId, profileId, id)
@@ -440,19 +447,27 @@ export async function updateProjectAction(_prev: ActionResult, formData: FormDat
     if (validationError) return { error: validationError }
   }
 
-  db.prepare(`
-    UPDATE portfolio_projects
-    SET title=?, role=?, description=?, skills=?, project_url=?, updated_at=datetime('now')
-    WHERE id=? AND user_id=?
-  `).run(
-    title,
-    (formData.get('role') as string) || '',
-    (formData.get('description') as string) || '',
-    (formData.get('skills') as string) || '',
-    (formData.get('project_url') as string) || '',
-    projectId,
-    session.userId,
-  )
+  const links = collectProjectLinks(formData)
+  if (links.error) return { error: links.error }
+
+  const transaction = db.transaction(() => {
+    db.prepare(`
+      UPDATE portfolio_projects
+      SET title=?, role=?, description=?, skills=?, project_url='', updated_at=datetime('now')
+      WHERE id=? AND user_id=?
+    `).run(
+      title,
+      (formData.get('role') as string) || '',
+      (formData.get('description') as string) || '',
+      (formData.get('skills') as string) || '',
+      projectId,
+      session.userId,
+    )
+
+    db.prepare('DELETE FROM project_links WHERE project_id = ? AND user_id = ?').run(projectId, session.userId)
+    insertProjectLinks(db, session.userId, projectId, links.items)
+  })
+  transaction()
 
   if (file && file.size > 0) {
     const dirPath = getProjectPath(session.userId, profileId, projectId)
@@ -593,6 +608,49 @@ function guessLinkLabel(url: string): string {
   if (lower.includes('instagram.com')) return 'Instagram'
   if (lower.includes('t.me') || lower.includes('telegram')) return 'Telegram'
   return 'Website'
+}
+
+function collectProjectLinks(formData: FormData): {
+  items: { label: string; url: string; sortOrder: number }[]
+  error?: string
+} {
+  const linkCount = Number(formData.get('linkCount') || 0)
+  const items: { label: string; url: string; sortOrder: number }[] = []
+
+  for (let index = 0; index < linkCount; index += 1) {
+    const rawUrl = (formData.get(`link_url_${index}`) as string | null)?.trim()
+    if (!rawUrl) continue
+
+    const url = normalizeUrl(rawUrl)
+    if (!url) {
+      return { items: [], error: 'Проверьте ссылки проекта: разрешены только http и https адреса' }
+    }
+
+    const rawLabel = (formData.get(`link_label_${index}`) as string | null)?.trim()
+    items.push({
+      label: rawLabel || guessLinkLabel(url),
+      url,
+      sortOrder: items.length,
+    })
+  }
+
+  return { items }
+}
+
+function insertProjectLinks(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  projectId: string,
+  links: { label: string; url: string; sortOrder: number }[],
+) {
+  const insert = db.prepare(`
+    INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+
+  for (const link of links) {
+    insert.run(generateId(), userId, projectId, link.label, link.url, link.sortOrder)
+  }
 }
 
 export async function normalizeSlugAction(value: string): Promise<string> {

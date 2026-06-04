@@ -84,6 +84,19 @@ function initSchema(db: Database.Database) {
       FOREIGN KEY (project_id) REFERENCES portfolio_projects(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS project_links (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      url TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (project_id) REFERENCES portfolio_projects(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS certificates (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -127,6 +140,7 @@ function initSchema(db: Database.Database) {
   ensureColumn(db, 'career_profiles', 'avatar_uploaded_at', 'TEXT')
   ensureColumn(db, 'career_profiles', 'show_resume_public', 'INTEGER NOT NULL DEFAULT 1')
   backfillProfileLinks(db)
+  backfillProjectLinks(db)
   backfillPublicSlugs(db)
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_career_profiles_public_slug ON career_profiles(public_slug)')
 }
@@ -166,6 +180,24 @@ function backfillProfileLinks(db: Database.Database) {
       INSERT INTO profile_links (id, user_id, career_profile_id, label, url, is_public, sort_order)
       VALUES (?, ?, ?, ?, ?, 1, 0)
     `).run(generateId(), profile.user_id, profile.id, guessLinkLabel(profile.website_url), profile.website_url)
+  }
+}
+
+function backfillProjectLinks(db: Database.Database) {
+  const projects = db.prepare(`
+    SELECT id, user_id, project_url
+    FROM portfolio_projects
+    WHERE project_url IS NOT NULL AND project_url != ''
+  `).all() as { id: string; user_id: string; project_url: string }[]
+
+  for (const project of projects) {
+    const existing = db.prepare('SELECT id FROM project_links WHERE project_id = ? LIMIT 1').get(project.id)
+    if (existing) continue
+
+    db.prepare(`
+      INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
+      VALUES (?, ?, ?, ?, ?, 0)
+    `).run(generateId(), project.user_id, project.id, guessLinkLabel(project.project_url), project.project_url)
   }
 }
 

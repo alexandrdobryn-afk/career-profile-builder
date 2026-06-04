@@ -174,7 +174,17 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                               borderRadius: 20,
                             }}>{skill}</span>
                           ))}
-                          {project.project_url && <a href={project.project_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{copy.public.openProject}</a>}
+                          {project.links?.map(link => (
+                            <a
+                              key={link.id}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}
+                            >
+                              {link.label}
+                            </a>
+                          ))}
                           {pdfFile && <a href={pdfFile.public_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700 }}>{copy.public.openPdf}</a>}
                         </div>
                       </article>

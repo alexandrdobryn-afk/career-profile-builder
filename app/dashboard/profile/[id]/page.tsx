@@ -208,7 +208,17 @@ export default async function ProfilePage({ params }: Props) {
                           borderRadius: 20,
                         }}>{skill}</span>
                       ))}
-                      {project.project_url && <a href={project.project_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>Ссылка</a>}
+                      {project.links?.map(link => (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700 }}
+                        >
+                          {link.label}
+                        </a>
+                      ))}
                       {documentFile && <a href={documentFile.public_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--accent)' }}>PDF</a>}
                     </div>
                   </div>
