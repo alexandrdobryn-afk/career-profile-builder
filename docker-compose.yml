@@ -8,5 +8,5 @@ services:
       - ./uploads:/app/uploads    # User files
     environment:
       - NODE_ENV=production
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production-use-32-chars-min}
+      - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env before starting the app}
     restart: unless-stopped

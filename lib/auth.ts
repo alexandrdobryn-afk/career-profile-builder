@@ -2,9 +2,6 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'dev-secret-change-in-production-please-32ch'
-)
 const COOKIE_NAME = 'session'
 
 export interface SessionPayload {
@@ -17,12 +14,12 @@ export async function createSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('7d')
-    .sign(SECRET)
+    .sign(getJwtSecret())
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET)
+    const { payload } = await jwtVerify(token, getJwtSecret())
     return {
       userId: payload.userId as string,
       email: payload.email as string,
@@ -30,6 +27,16 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
   } catch {
     return null
   }
+}
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET
+
+  if (process.env.NODE_ENV === 'production' && (!secret || secret.length < 32 || secret.startsWith('change-me'))) {
+    throw new Error('JWT_SECRET must be set to a random 32+ character value in production')
+  }
+
+  return new TextEncoder().encode(secret || 'dev-secret-change-in-production-please-32ch')
 }
 
 export async function getSession(): Promise<SessionPayload | null> {

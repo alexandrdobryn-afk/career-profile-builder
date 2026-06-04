@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 
 const UPLOADS_ROOT = path.join(process.cwd(), 'uploads')
+const UPLOADS_ROOT_ABSOLUTE = path.resolve(UPLOADS_ROOT)
 
 export async function GET(
   _request: Request,
@@ -12,9 +13,9 @@ export async function GET(
 ) {
   const { path: pathSegments } = await params
   const relativePath = pathSegments.join('/')
-  const absolutePath = path.normalize(path.join(UPLOADS_ROOT, relativePath))
+  const absolutePath = path.resolve(UPLOADS_ROOT_ABSOLUTE, relativePath)
 
-  if (!absolutePath.startsWith(UPLOADS_ROOT)) {
+  if (!isInsideDirectory(absolutePath, UPLOADS_ROOT_ABSOLUTE)) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
@@ -28,8 +29,8 @@ export async function GET(
   }
 
   if (session) {
-    const expectedPrefix = path.join(UPLOADS_ROOT, 'users', session.userId)
-    if (!absolutePath.startsWith(expectedPrefix) && !isPublicFile(absolutePath)) {
+    const expectedPrefix = path.resolve(UPLOADS_ROOT_ABSOLUTE, 'users', session.userId)
+    if (!isInsideDirectory(absolutePath, expectedPrefix) && !isPublicFile(absolutePath)) {
       return new NextResponse('Forbidden', { status: 403 })
     }
   }
@@ -47,6 +48,11 @@ export async function GET(
       'Cache-Control': 'private, max-age=3600',
     },
   })
+}
+
+function isInsideDirectory(filePath: string, directoryPath: string): boolean {
+  const relative = path.relative(directoryPath, filePath)
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }
 
 function isPublicFile(filePath: string): boolean {
