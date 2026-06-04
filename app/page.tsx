@@ -23,7 +23,7 @@ export default async function HomePage({ searchParams }: Props) {
   const lang = await getRequestLang(langParam)
   const copy = t(lang)
   const session = await getCurrentUser()
-  const profiles = query ? searchPublicProfiles(query) : []
+  const profiles = query ? await searchPublicProfiles(query) : []
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

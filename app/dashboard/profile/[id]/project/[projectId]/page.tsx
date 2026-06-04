@@ -17,10 +17,11 @@ export default async function EditProjectPage({ params }: Props) {
   const lang = await getRequestLang()
   const copy = t(lang)
 
-  const profile = getProfile(id, session.userId)
+  const [profile, project] = await Promise.all([
+    getProfile(id, session.userId),
+    getProject(projectId, session.userId),
+  ])
   if (!profile) notFound()
-
-  const project = getProject(projectId, session.userId)
   if (!project) notFound()
 
   return (

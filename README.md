@@ -1,17 +1,17 @@
 # JobProfile - Career Profile Builder
 
-JobProfile is a small web service for creating public professional profiles.
+JobProfile is a small multilingual service for creating public professional profiles.
 
 Each user can create one or more profiles with:
 
 - basic professional information;
-- downloadable resume;
+- downloadable resume with a public visibility toggle;
 - profile photo;
-- portfolio projects;
+- portfolio projects with multiple external links;
 - certificates;
-- public links such as LinkedIn, GitHub, YouTube, and Facebook.
+- public/private links such as LinkedIn, GitHub, YouTube, Facebook, or a personal website.
 
-Visitors can open a public profile link, view the information online, and download the resume if the owner allows it.
+Visitors can search specialists, open a public profile link, view the portfolio online, and download the resume only if the owner allows it.
 
 ## Stack
 
@@ -19,10 +19,10 @@ Visitors can open a public profile link, view the information online, and downlo
 | --- | --- |
 | Frontend | Next.js 16, React 19, TypeScript |
 | Backend | Next.js Server Actions, API routes |
-| Database | SQLite via better-sqlite3 |
+| Database | Turso/libSQL via `@libsql/client` |
 | Auth | JWT httpOnly cookies, bcryptjs |
-| Files | Local uploads directory |
-| Runtime | Docker / Docker Compose |
+| Files | Private Vercel Blob storage |
+| Deployment | Vercel |
 
 ## Local Development
 
@@ -34,7 +34,51 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Docker Run
+The app requires Turso and Vercel Blob credentials even in local development because runtime data is no longer stored on the local filesystem.
+
+## Environment Variables
+
+Create `.env.local` for local development and add the same variables in Vercel:
+
+```bash
+JWT_SECRET=change-this-to-a-random-secret-at-least-32-characters
+TURSO_DATABASE_URL=libsql://your-database-name-your-org.turso.io
+TURSO_AUTH_TOKEN=your-turso-token
+BLOB_READ_WRITE_TOKEN=your-vercel-blob-read-write-token
+```
+
+`JWT_SECRET` must be at least 32 characters and must not use the default placeholder in production.
+
+## Turso Setup
+
+Create a Turso database, generate an auth token, and set:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+
+The application creates and updates the required tables automatically on first database access.
+
+## Vercel Blob Setup
+
+Create a Vercel Blob store for the project. Use a private store for user files.
+
+Set:
+
+- `BLOB_READ_WRITE_TOKEN`
+
+Uploaded resumes, photos, project files, and certificate files are stored in private Blob storage. Browser access goes through `/api/files/...`, where the app checks whether the file belongs to the logged-in user or is allowed on a public profile.
+
+## Deployment
+
+1. Push the repository to GitHub.
+2. Import the repository into Vercel.
+3. Add the environment variables listed above.
+4. Create/connect Vercel Blob storage.
+5. Deploy.
+
+## Docker
+
+Docker is kept only as an optional runtime wrapper. It still requires Turso and Vercel Blob environment variables:
 
 ```bash
 docker compose up -d --build
@@ -50,27 +94,11 @@ docker compose up -d --build
 
 The app is available at `http://localhost:3012`.
 
-## Environment
+## Data Storage
 
-Create a production secret before deployment:
+Runtime data is stored outside the repo:
 
-```bash
-JWT_SECRET=change-this-to-a-random-32-character-secret
-```
+- profiles, users, links, projects, and certificates: Turso/libSQL;
+- resumes, profile photos, portfolio files, and certificate files: private Vercel Blob.
 
-## Persistent Data
-
-The app stores runtime data in:
-
-- `data/` - SQLite database;
-- `uploads/` - resumes, profile photos, portfolio files, and certificates.
-
-These folders are intentionally ignored by Git.
-
-## Deployment Note
-
-This MVP uses SQLite and local file uploads, so it needs persistent disk storage.
-
-Serverless platforms such as Vercel are not a good fit without changing storage to something like Supabase Postgres + Supabase Storage, because local database and upload files are not persistent there.
-
-For a simple Docker deployment, use a host that supports persistent volumes.
+There is no local SQLite database and no local uploads directory in production.

@@ -17,7 +17,7 @@ export default async function EditProfilePage({ params }: Props) {
   const lang = await getRequestLang()
   const copy = t(lang)
 
-  const profile = getProfile(id, session.userId)
+  const profile = await getProfile(id, session.userId)
   if (!profile) notFound()
 
   return (

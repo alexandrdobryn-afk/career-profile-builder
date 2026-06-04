@@ -39,12 +39,14 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
   const { lang: langParam } = await searchParams
   const lang = await getRequestLang(langParam)
   const copy = t(lang)
-  const profile = getPublicProfile(slug)
+  const profile = await getPublicProfile(slug)
   if (!profile) notFound()
 
-  const projects = getPublicProjects(profile.id)
-  const certificates = getPublicCertificates(profile.id)
-  const links = getPublicProfileLinks(profile.id)
+  const [projects, certificates, links] = await Promise.all([
+    getPublicProjects(profile.id),
+    getPublicCertificates(profile.id),
+    getPublicProfileLinks(profile.id),
+  ])
   const resumeUrl = getResumePublicUrl(profile)
   const avatarUrl = getAvatarUrl(profile)
   const skills = profile.skills ? profile.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []

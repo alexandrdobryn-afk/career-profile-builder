@@ -1,28 +1,36 @@
-import Database from 'better-sqlite3'
-import fs from 'fs'
-import path from 'path'
+import { createClient, type Client, type InArgs, type InStatement } from '@libsql/client'
 
-const DB_PATH = path.join(process.cwd(), 'data', 'app.db')
-const dataDir = path.dirname(DB_PATH)
+let client: Client | null = null
+let schemaReady: Promise<void> | null = null
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true })
-}
+function createDbClient(): Client {
+  const url = process.env.TURSO_DATABASE_URL
+  const authToken = process.env.TURSO_AUTH_TOKEN
 
-let _db: Database.Database | null = null
-
-export function getDb(): Database.Database {
-  if (!_db) {
-    _db = new Database(DB_PATH)
-    _db.pragma('journal_mode = WAL')
-    _db.pragma('foreign_keys = ON')
-    initSchema(_db)
+  if (!url) {
+    throw new Error('TURSO_DATABASE_URL is required. Create a Turso database and set the Vercel environment variable.')
   }
-  return _db
+
+  return createClient({
+    url,
+    authToken,
+  })
 }
 
-function initSchema(db: Database.Database) {
-  db.exec(`
+export async function getDb(): Promise<Client> {
+  if (!client) {
+    client = createDbClient()
+    schemaReady = initSchema(client)
+  }
+
+  await schemaReady
+  return client
+}
+
+async function initSchema(db: Client) {
+  await db.executeMultiple(`
+    PRAGMA foreign_keys = ON;
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
@@ -130,74 +138,80 @@ function initSchema(db: Database.Database) {
     );
   `)
 
-  ensureColumn(db, 'career_profiles', 'public_slug', 'TEXT')
-  ensureColumn(db, 'career_profiles', 'is_public', 'INTEGER NOT NULL DEFAULT 1')
-  ensureColumn(db, 'career_profiles', 'location', "TEXT DEFAULT ''")
-  ensureColumn(db, 'career_profiles', 'contact_email', "TEXT DEFAULT ''")
-  ensureColumn(db, 'career_profiles', 'website_url', "TEXT DEFAULT ''")
-  ensureColumn(db, 'career_profiles', 'avatar_file_path', 'TEXT')
-  ensureColumn(db, 'career_profiles', 'avatar_file_name', 'TEXT')
-  ensureColumn(db, 'career_profiles', 'avatar_uploaded_at', 'TEXT')
-  ensureColumn(db, 'career_profiles', 'show_resume_public', 'INTEGER NOT NULL DEFAULT 1')
-  backfillProfileLinks(db)
-  backfillProjectLinks(db)
-  backfillPublicSlugs(db)
-  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_career_profiles_public_slug ON career_profiles(public_slug)')
+  await ensureColumn(db, 'career_profiles', 'public_slug', 'TEXT')
+  await ensureColumn(db, 'career_profiles', 'is_public', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'career_profiles', 'location', "TEXT DEFAULT ''")
+  await ensureColumn(db, 'career_profiles', 'contact_email', "TEXT DEFAULT ''")
+  await ensureColumn(db, 'career_profiles', 'website_url', "TEXT DEFAULT ''")
+  await ensureColumn(db, 'career_profiles', 'avatar_file_path', 'TEXT')
+  await ensureColumn(db, 'career_profiles', 'avatar_file_name', 'TEXT')
+  await ensureColumn(db, 'career_profiles', 'avatar_uploaded_at', 'TEXT')
+  await ensureColumn(db, 'career_profiles', 'show_resume_public', 'INTEGER NOT NULL DEFAULT 1')
+  await backfillProfileLinks(db)
+  await backfillProjectLinks(db)
+  await backfillPublicSlugs(db)
+  await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_career_profiles_public_slug ON career_profiles(public_slug)')
 }
 
-function ensureColumn(db: Database.Database, table: string, column: string, definition: string) {
-  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
-  if (!columns.some(c => c.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+async function ensureColumn(db: Client, table: string, column: string, definition: string) {
+  const result = await db.execute(`PRAGMA table_info(${table})`)
+  if (!result.rows.some(row => row.name === column)) {
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
   }
 }
 
-function backfillPublicSlugs(db: Database.Database) {
-  const profiles = db.prepare(`
+async function backfillPublicSlugs(db: Client) {
+  const profiles = (await db.execute(`
     SELECT id, title, public_slug
     FROM career_profiles
     WHERE public_slug IS NULL OR public_slug = ''
-  `).all() as { id: string; title: string; public_slug: string | null }[]
+  `)).rows as unknown as { id: string; title: string; public_slug: string | null }[]
 
   for (const profile of profiles) {
-    const slug = createUniqueSlug(db, profile.title, profile.id)
-    db.prepare('UPDATE career_profiles SET public_slug = ? WHERE id = ?').run(slug, profile.id)
+    const slug = await createUniqueSlug(db, profile.title, profile.id)
+    await db.execute({ sql: 'UPDATE career_profiles SET public_slug = ? WHERE id = ?', args: [slug, profile.id] })
   }
 }
 
-function backfillProfileLinks(db: Database.Database) {
-  const profiles = db.prepare(`
+async function backfillProfileLinks(db: Client) {
+  const profiles = (await db.execute(`
     SELECT id, user_id, website_url
     FROM career_profiles
     WHERE website_url IS NOT NULL AND website_url != ''
-  `).all() as { id: string; user_id: string; website_url: string }[]
+  `)).rows as unknown as { id: string; user_id: string; website_url: string }[]
 
   for (const profile of profiles) {
-    const existing = db.prepare('SELECT id FROM profile_links WHERE career_profile_id = ? LIMIT 1').get(profile.id)
+    const existing = await getOne(db, 'SELECT id FROM profile_links WHERE career_profile_id = ? LIMIT 1', [profile.id])
     if (existing) continue
 
-    db.prepare(`
-      INSERT INTO profile_links (id, user_id, career_profile_id, label, url, is_public, sort_order)
-      VALUES (?, ?, ?, ?, ?, 1, 0)
-    `).run(generateId(), profile.user_id, profile.id, guessLinkLabel(profile.website_url), profile.website_url)
+    await db.execute({
+      sql: `
+        INSERT INTO profile_links (id, user_id, career_profile_id, label, url, is_public, sort_order)
+        VALUES (?, ?, ?, ?, ?, 1, 0)
+      `,
+      args: [generateId(), profile.user_id, profile.id, guessLinkLabel(profile.website_url), profile.website_url],
+    })
   }
 }
 
-function backfillProjectLinks(db: Database.Database) {
-  const projects = db.prepare(`
+async function backfillProjectLinks(db: Client) {
+  const projects = (await db.execute(`
     SELECT id, user_id, project_url
     FROM portfolio_projects
     WHERE project_url IS NOT NULL AND project_url != ''
-  `).all() as { id: string; user_id: string; project_url: string }[]
+  `)).rows as unknown as { id: string; user_id: string; project_url: string }[]
 
   for (const project of projects) {
-    const existing = db.prepare('SELECT id FROM project_links WHERE project_id = ? LIMIT 1').get(project.id)
+    const existing = await getOne(db, 'SELECT id FROM project_links WHERE project_id = ? LIMIT 1', [project.id])
     if (existing) continue
 
-    db.prepare(`
-      INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
-      VALUES (?, ?, ?, ?, ?, 0)
-    `).run(generateId(), project.user_id, project.id, guessLinkLabel(project.project_url), project.project_url)
+    await db.execute({
+      sql: `
+        INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
+        VALUES (?, ?, ?, ?, ?, 0)
+      `,
+      args: [generateId(), project.user_id, project.id, guessLinkLabel(project.project_url), project.project_url],
+    })
   }
 }
 
@@ -220,21 +234,39 @@ export function slugify(value: string): string {
   const slug = value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9а-яёієїґ]+/gi, '-')
+    .replace(/[^a-z0-9а-яёіїєґ]+/gi, '-')
     .replace(/^-+|-+$/g, '')
 
   return slug || 'profile'
 }
 
-export function createUniqueSlug(db: Database.Database, value: string, currentId?: string): string {
+export async function createUniqueSlug(db: Client, value: string, currentId?: string): Promise<string> {
   const base = slugify(value)
   let candidate = base
   let index = 2
 
   while (true) {
-    const existing = db.prepare('SELECT id FROM career_profiles WHERE public_slug = ?').get(candidate) as { id: string } | undefined
+    const existing = await getOne<{ id: string }>(db, 'SELECT id FROM career_profiles WHERE public_slug = ?', [candidate])
     if (!existing || existing.id === currentId) return candidate
     candidate = `${base}-${index}`
     index += 1
   }
+}
+
+export async function getOne<T>(db: Client, sql: string, args: InArgs = []): Promise<T | null> {
+  const result = await db.execute({ sql, args })
+  return (result.rows[0] as T | undefined) ?? null
+}
+
+export async function getAll<T>(db: Client, sql: string, args: InArgs = []): Promise<T[]> {
+  const result = await db.execute({ sql, args })
+  return result.rows as unknown as T[]
+}
+
+export async function run(db: Client, sql: string, args: InArgs = []) {
+  return db.execute({ sql, args })
+}
+
+export async function batch(db: Client, statements: InStatement[]) {
+  return db.batch(statements, 'write')
 }

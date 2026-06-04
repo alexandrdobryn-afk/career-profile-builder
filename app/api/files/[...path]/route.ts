@@ -1,47 +1,43 @@
-import fs from 'fs'
 import path from 'path'
+import { get } from '@vercel/blob'
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { getDb } from '@/lib/db'
-
-const UPLOADS_ROOT = path.join(process.cwd(), 'uploads')
-const UPLOADS_ROOT_ABSOLUTE = path.resolve(UPLOADS_ROOT)
+import { getDb, getOne } from '@/lib/db'
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path: pathSegments } = await params
-  const relativePath = pathSegments.join('/')
-  const absolutePath = path.resolve(UPLOADS_ROOT_ABSOLUTE, relativePath)
-
-  if (!isInsideDirectory(absolutePath, UPLOADS_ROOT_ABSOLUTE)) {
+  const pathname = normalizeBlobPath(pathSegments)
+  if (!pathname) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
-  if (!fs.existsSync(absolutePath)) {
-    return new NextResponse('Not Found', { status: 404 })
-  }
-
   const session = await getCurrentUser()
-  if (!session && !isPublicFile(absolutePath)) {
+  const isPublic = await isPublicFile(pathname)
+  if (!session && !isPublic) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   if (session) {
-    const expectedPrefix = path.resolve(UPLOADS_ROOT_ABSOLUTE, 'users', session.userId)
-    if (!isInsideDirectory(absolutePath, expectedPrefix) && !isPublicFile(absolutePath)) {
+    const ownsFile = pathname.startsWith(`users/${session.userId}/`)
+    if (!ownsFile && !isPublic) {
       return new NextResponse('Forbidden', { status: 403 })
     }
   }
 
-  const ext = path.extname(absolutePath).toLowerCase()
+  const blob = await get(pathname, { access: 'private' })
+  if (!blob?.stream) {
+    return new NextResponse('Not Found', { status: 404 })
+  }
+
+  const ext = path.extname(pathname).toLowerCase()
   const contentType = getContentType(ext)
-  const fileBuffer = fs.readFileSync(absolutePath)
-  const fileName = path.basename(absolutePath)
+  const fileName = path.basename(pathname)
   const isHtml = ext === '.html' || ext === '.htm'
 
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(blob.stream as BodyInit, {
     headers: {
       'Content-Type': contentType,
       'Content-Disposition': `${isHtml ? 'attachment' : 'inline'}; filename="${fileName}"`,
@@ -50,43 +46,47 @@ export async function GET(
   })
 }
 
-function isInsideDirectory(filePath: string, directoryPath: string): boolean {
-  const relative = path.relative(directoryPath, filePath)
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+function normalizeBlobPath(pathSegments: string[]): string | null {
+  const pathname = pathSegments.join('/').replace(/\\/g, '/')
+  const normalized = path.posix.normalize(pathname)
+  if (normalized.startsWith('../') || normalized === '..' || path.posix.isAbsolute(normalized)) {
+    return null
+  }
+  return normalized
 }
 
-function isPublicFile(filePath: string): boolean {
-  const db = getDb()
+async function isPublicFile(pathname: string): Promise<boolean> {
+  const db = await getDb()
 
-  const resume = db.prepare(`
+  const resume = await getOne(db, `
     SELECT cp.id
     FROM career_profiles cp
     WHERE cp.resume_file_path = ? AND cp.is_public = 1 AND cp.show_resume_public = 1
-  `).get(filePath)
+  `, [pathname])
   if (resume) return true
 
-  const avatar = db.prepare(`
+  const avatar = await getOne(db, `
     SELECT cp.id
     FROM career_profiles cp
     WHERE cp.avatar_file_path = ? AND cp.is_public = 1
-  `).get(filePath)
+  `, [pathname])
   if (avatar) return true
 
-  const projectFile = db.prepare(`
+  const projectFile = await getOne(db, `
     SELECT pf.id
     FROM project_files pf
     JOIN portfolio_projects pp ON pp.id = pf.project_id
     JOIN career_profiles cp ON cp.id = pp.career_profile_id
     WHERE pf.file_path = ? AND cp.is_public = 1
-  `).get(filePath)
+  `, [pathname])
   if (projectFile) return true
 
-  const certificateFile = db.prepare(`
+  const certificateFile = await getOne(db, `
     SELECT c.id
     FROM certificates c
     JOIN career_profiles cp ON cp.id = c.career_profile_id
     WHERE c.file_path = ? AND cp.is_public = 1
-  `).get(filePath)
+  `, [pathname])
 
   return Boolean(certificateFile)
 }
@@ -101,6 +101,7 @@ function getContentType(ext: string): string {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
     '.webp': 'image/webp',
   }
 

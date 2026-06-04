@@ -40,12 +40,14 @@ export default async function ProfilePage({ params }: Props) {
   const lang = await getRequestLang()
   const copy = t(lang)
 
-  const profile = getProfile(id, session.userId)
+  const profile = await getProfile(id, session.userId)
   if (!profile) notFound()
 
-  const projects = getProjects(id, session.userId)
-  const certificates = getCertificates(id, session.userId)
-  const profileLinks = getProfileLinks(id, session.userId)
+  const [projects, certificates, profileLinks] = await Promise.all([
+    getProjects(id, session.userId),
+    getCertificates(id, session.userId),
+    getProfileLinks(id, session.userId),
+  ])
   const resumeUrl = getResumeDashboardUrl(profile)
   const avatarUrl = getAvatarUrl(profile)
   const skillsList = profile.skills ? profile.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []

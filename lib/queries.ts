@@ -1,4 +1,4 @@
-import { getDb } from './db'
+import { getAll, getDb, getOne } from './db'
 import { getPublicFilePath } from './files'
 
 export interface Profile {
@@ -82,9 +82,9 @@ export interface Certificate {
   created_at: string
 }
 
-export function getProfiles(userId: string): Profile[] {
-  const db = getDb()
-  return db.prepare(`
+export async function getProfiles(userId: string): Promise<Profile[]> {
+  const db = await getDb()
+  return getAll<Profile>(db, `
     SELECT
       cp.*,
       COUNT(DISTINCT pp.id) as project_count,
@@ -95,15 +95,15 @@ export function getProfiles(userId: string): Profile[] {
     WHERE cp.user_id = ?
     GROUP BY cp.id
     ORDER BY cp.created_at ASC
-  `).all(userId) as Profile[]
+  `, [userId])
 }
 
-export function searchPublicProfiles(query?: string): Profile[] {
-  const db = getDb()
+export async function searchPublicProfiles(query?: string): Promise<Profile[]> {
+  const db = await getDb()
   const q = query?.trim()
 
   if (!q) {
-    return db.prepare(`
+    return getAll<Profile>(db, `
       SELECT
         cp.*,
         COUNT(DISTINCT pp.id) as project_count,
@@ -115,7 +115,7 @@ export function searchPublicProfiles(query?: string): Profile[] {
       GROUP BY cp.id
       ORDER BY cp.updated_at DESC
       LIMIT 24
-    `).all() as Profile[]
+    `)
   }
 
   const terms = q
@@ -151,7 +151,7 @@ export function searchPublicProfiles(query?: string): Profile[] {
 
   const params = terms.flatMap(term => fields.map(() => `%${term}%`))
 
-  return db.prepare(`
+  return getAll<Profile>(db, `
     SELECT
       cp.*,
       COUNT(DISTINCT pp.id) as project_count,
@@ -166,105 +166,105 @@ export function searchPublicProfiles(query?: string): Profile[] {
     GROUP BY cp.id
     ORDER BY cp.updated_at DESC
     LIMIT 50
-  `).all(...params) as Profile[]
+  `, params)
 }
 
-export function getProfile(profileId: string, userId: string): Profile | null {
-  const db = getDb()
-  return db.prepare('SELECT * FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, userId) as Profile | null
+export async function getProfile(profileId: string, userId: string): Promise<Profile | null> {
+  const db = await getDb()
+  return getOne<Profile>(db, 'SELECT * FROM career_profiles WHERE id = ? AND user_id = ?', [profileId, userId])
 }
 
-export function getPublicProfile(slug: string): Profile | null {
-  const db = getDb()
-  return db.prepare('SELECT * FROM career_profiles WHERE public_slug = ? AND is_public = 1').get(slug) as Profile | null
+export async function getPublicProfile(slug: string): Promise<Profile | null> {
+  const db = await getDb()
+  return getOne<Profile>(db, 'SELECT * FROM career_profiles WHERE public_slug = ? AND is_public = 1', [slug])
 }
 
-export function getProfileLinks(profileId: string, userId: string): ProfileLink[] {
-  const db = getDb()
-  return db.prepare(`
+export async function getProfileLinks(profileId: string, userId: string): Promise<ProfileLink[]> {
+  const db = await getDb()
+  return getAll<ProfileLink>(db, `
     SELECT * FROM profile_links
     WHERE career_profile_id = ? AND user_id = ?
     ORDER BY sort_order ASC, created_at ASC
-  `).all(profileId, userId) as ProfileLink[]
+  `, [profileId, userId])
 }
 
-export function getPublicProfileLinks(profileId: string): ProfileLink[] {
-  const db = getDb()
-  return db.prepare(`
+export async function getPublicProfileLinks(profileId: string): Promise<ProfileLink[]> {
+  const db = await getDb()
+  return getAll<ProfileLink>(db, `
     SELECT pl.*
     FROM profile_links pl
     JOIN career_profiles cp ON cp.id = pl.career_profile_id
     WHERE pl.career_profile_id = ? AND pl.is_public = 1 AND cp.is_public = 1
     ORDER BY pl.sort_order ASC, pl.created_at ASC
-  `).all(profileId) as ProfileLink[]
+  `, [profileId])
 }
 
-export function getProjects(profileId: string, userId: string): Project[] {
-  const db = getDb()
-  const projects = db.prepare(`
+export async function getProjects(profileId: string, userId: string): Promise<Project[]> {
+  const db = await getDb()
+  const projects = await getAll<Project>(db, `
     SELECT * FROM portfolio_projects
     WHERE career_profile_id = ? AND user_id = ?
     ORDER BY created_at ASC
-  `).all(profileId, userId) as Project[]
+  `, [profileId, userId])
 
   return attachProjectFiles(projects)
 }
 
-export function getPublicProjects(profileId: string): Project[] {
-  const db = getDb()
-  const projects = db.prepare(`
+export async function getPublicProjects(profileId: string): Promise<Project[]> {
+  const db = await getDb()
+  const projects = await getAll<Project>(db, `
     SELECT pp.*
     FROM portfolio_projects pp
     JOIN career_profiles cp ON cp.id = pp.career_profile_id
     WHERE pp.career_profile_id = ? AND cp.is_public = 1
     ORDER BY pp.created_at ASC
-  `).all(profileId) as Project[]
+  `, [profileId])
 
   return attachProjectFiles(projects)
 }
 
-function attachProjectFiles(projects: Project[]): Project[] {
-  const db = getDb()
+async function attachProjectFiles(projects: Project[]): Promise<Project[]> {
+  const db = await getDb()
 
-  return projects.map(project => ({
+  return Promise.all(projects.map(async project => ({
     ...project,
-    files: (db.prepare('SELECT * FROM project_files WHERE project_id = ?').all(project.id) as Omit<ProjectFile, 'public_url'>[])
+    files: (await getAll<Omit<ProjectFile, 'public_url'>>(db, 'SELECT * FROM project_files WHERE project_id = ?', [project.id]))
       .map(file => ({ ...file, public_url: getPublicFilePath(file.file_path) })),
-    links: db.prepare(`
+    links: await getAll<ProjectLink>(db, `
       SELECT * FROM project_links
       WHERE project_id = ?
       ORDER BY sort_order ASC, created_at ASC
-    `).all(project.id) as ProjectLink[],
-  }))
+    `, [project.id]),
+  })))
 }
 
-export function getProject(projectId: string, userId: string): Project | null {
-  const db = getDb()
-  const project = db.prepare('SELECT * FROM portfolio_projects WHERE id = ? AND user_id = ?').get(projectId, userId) as Project | null
+export async function getProject(projectId: string, userId: string): Promise<Project | null> {
+  const db = await getDb()
+  const project = await getOne<Project>(db, 'SELECT * FROM portfolio_projects WHERE id = ? AND user_id = ?', [projectId, userId])
   if (!project) return null
-  return attachProjectFiles([project])[0]
+  return (await attachProjectFiles([project]))[0]
 }
 
-export function getCertificates(profileId: string, userId: string): Certificate[] {
-  const db = getDb()
-  const certificates = db.prepare(`
+export async function getCertificates(profileId: string, userId: string): Promise<Certificate[]> {
+  const db = await getDb()
+  const certificates = await getAll<Certificate>(db, `
     SELECT * FROM certificates
     WHERE career_profile_id = ? AND user_id = ?
     ORDER BY created_at DESC
-  `).all(profileId, userId) as Certificate[]
+  `, [profileId, userId])
 
   return attachCertificateFiles(certificates)
 }
 
-export function getPublicCertificates(profileId: string): Certificate[] {
-  const db = getDb()
-  const certificates = db.prepare(`
+export async function getPublicCertificates(profileId: string): Promise<Certificate[]> {
+  const db = await getDb()
+  const certificates = await getAll<Certificate>(db, `
     SELECT c.*
     FROM certificates c
     JOIN career_profiles cp ON cp.id = c.career_profile_id
     WHERE c.career_profile_id = ? AND cp.is_public = 1
     ORDER BY c.created_at DESC
-  `).all(profileId) as Certificate[]
+  `, [profileId])
 
   return attachCertificateFiles(certificates)
 }

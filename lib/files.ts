@@ -1,7 +1,5 @@
-import fs from 'fs'
 import path from 'path'
-
-const UPLOADS_ROOT = path.join(process.cwd(), 'uploads')
+import { del, list, put } from '@vercel/blob'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024
@@ -26,19 +24,19 @@ export type FileCategory = 'resume' | 'avatar' | 'project' | 'certificate'
 
 export function validateFile(file: File, category: FileCategory): string | null {
   const maxSize = category === 'avatar' ? MAX_AVATAR_SIZE : MAX_FILE_SIZE
-  const maxLabel = category === 'avatar' ? '2 МБ' : '10 МБ'
-  if (file.size > maxSize) return `Файл слишком большой. Максимум ${maxLabel}.`
+  const maxLabel = category === 'avatar' ? '2 MB' : '10 MB'
+  if (file.size > maxSize) return `File is too large. Maximum ${maxLabel}.`
 
   const ext = path.extname(file.name).toLowerCase()
   const allowedExts = getAllowedExts(category)
   const allowedTypes = getAllowedTypes(category)
 
   if (!allowedExts.includes(ext)) {
-    return `Недопустимый формат файла. Разрешены: ${allowedExts.join(', ')}`
+    return `Unsupported file format. Allowed: ${allowedExts.join(', ')}`
   }
 
   if (file.type && !allowedTypes.includes(file.type)) {
-    return 'Недопустимый тип файла'
+    return 'Unsupported file type'
   }
 
   return null
@@ -58,50 +56,59 @@ function getAllowedTypes(category: FileCategory) {
   return ALLOWED_PROJECT_TYPES
 }
 
+function joinStoragePath(...parts: string[]): string {
+  return parts
+    .flatMap(part => part.split(/[\\/]+/))
+    .map(part => part.trim())
+    .filter(Boolean)
+    .join('/')
+}
+
 export function getProfilePath(userId: string, profileId: string): string {
-  return path.join(UPLOADS_ROOT, 'users', userId, 'profiles', profileId)
+  return joinStoragePath('users', userId, 'profiles', profileId)
 }
 
 export function getResumePath(userId: string, profileId: string): string {
-  return path.join(getProfilePath(userId, profileId), 'resume')
+  return joinStoragePath(getProfilePath(userId, profileId), 'resume')
 }
 
 export function getAvatarPath(userId: string, profileId: string): string {
-  return path.join(getProfilePath(userId, profileId), 'avatar')
+  return joinStoragePath(getProfilePath(userId, profileId), 'avatar')
 }
 
 export function getProjectPath(userId: string, profileId: string, projectId: string): string {
-  return path.join(getProfilePath(userId, profileId), 'projects', projectId)
+  return joinStoragePath(getProfilePath(userId, profileId), 'projects', projectId)
 }
 
 export function getCertificatePath(userId: string, profileId: string, certificateId: string): string {
-  return path.join(getProfilePath(userId, profileId), 'certificates', certificateId)
+  return joinStoragePath(getProfilePath(userId, profileId), 'certificates', certificateId)
 }
 
 export async function saveFile(file: File, dirPath: string, filename: string): Promise<string> {
-  fs.mkdirSync(dirPath, { recursive: true })
-
   const ext = path.extname(file.name).toLowerCase()
-  const fullPath = path.join(dirPath, filename + ext)
-  const bytes = await file.arrayBuffer()
+  const pathname = joinStoragePath(dirPath, filename + ext)
 
-  fs.writeFileSync(fullPath, Buffer.from(bytes))
-  return fullPath
+  const blob = await put(pathname, file, {
+    access: 'private',
+    allowOverwrite: true,
+    contentType: file.type || undefined,
+  })
+
+  return blob.pathname
 }
 
-export function deleteDirectory(dirPath: string) {
-  if (fs.existsSync(dirPath)) {
-    fs.rmSync(dirPath, { recursive: true, force: true })
+export async function deleteDirectory(dirPath: string) {
+  const prefix = joinStoragePath(dirPath)
+  const blobs = await list({ prefix, limit: 1000 })
+  if (blobs.blobs.length > 0) {
+    await del(blobs.blobs.map(blob => blob.pathname))
   }
 }
 
-export function clearDirectory(dirPath: string) {
-  if (fs.existsSync(dirPath)) {
-    fs.readdirSync(dirPath).forEach(file => fs.unlinkSync(path.join(dirPath, file)))
-  }
+export async function clearDirectory(dirPath: string) {
+  await deleteDirectory(dirPath)
 }
 
-export function getPublicFilePath(absolutePath: string): string {
-  const relative = path.relative(UPLOADS_ROOT, absolutePath)
-  return `/api/files/${relative.replace(/\\/g, '/')}`
+export function getPublicFilePath(pathname: string): string {
+  return `/api/files/${pathname.replace(/^\/+/, '')}`
 }

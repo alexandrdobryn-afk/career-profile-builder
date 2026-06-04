@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import bcrypt from 'bcryptjs'
 import { createSession, setSessionCookie, clearSessionCookie, getCurrentUser } from './auth'
-import { createUniqueSlug, generateId, getDb, slugify } from './db'
+import { batch, createUniqueSlug, generateId, getDb, getOne, run, slugify } from './db'
 import {
   clearDirectory,
   deleteDirectory,
@@ -18,23 +18,24 @@ import {
 } from './files'
 
 type ActionResult = { error?: string; success?: boolean } | undefined
+type OwnedProfile = { id: string; public_slug: string }
 
 export async function registerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const email = (formData.get('email') as string)?.trim()
   const password = formData.get('password') as string
   const confirm = formData.get('confirm') as string
 
-  if (!email || !password) return { error: 'Заполните все поля' }
-  if (password.length < 8) return { error: 'Пароль должен быть не короче 8 символов' }
-  if (password !== confirm) return { error: 'Пароли не совпадают' }
+  if (!email || !password) return { error: 'Fill in all fields' }
+  if (password.length < 8) return { error: 'Password must be at least 8 characters' }
+  if (password !== confirm) return { error: 'Passwords do not match' }
 
-  const db = getDb()
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
-  if (existing) return { error: 'Пользователь с таким email уже существует' }
+  const db = await getDb()
+  const existing = await getOne<{ id: string }>(db, 'SELECT id FROM users WHERE email = ?', [email])
+  if (existing) return { error: 'User with this email already exists' }
 
   const hash = await bcrypt.hash(password, 12)
   const id = generateId()
-  db.prepare('INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)').run(id, email, hash)
+  await run(db, 'INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)', [id, email, hash])
 
   const token = await createSession({ userId: id, email })
   await setSessionCookie(token)
@@ -45,17 +46,19 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
   const email = (formData.get('email') as string)?.trim()
   const password = formData.get('password') as string
 
-  if (!email || !password) return { error: 'Заполните все поля' }
+  if (!email || !password) return { error: 'Fill in all fields' }
 
-  const db = getDb()
-  const user = db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?').get(email) as
-    | { id: string; email: string; password_hash: string }
-    | undefined
+  const db = await getDb()
+  const user = await getOne<{ id: string; email: string; password_hash: string }>(
+    db,
+    'SELECT id, email, password_hash FROM users WHERE email = ?',
+    [email],
+  )
 
-  if (!user) return { error: 'Неверный email или пароль' }
+  if (!user) return { error: 'Invalid email or password' }
 
   const valid = await bcrypt.compare(password, user.password_hash)
-  if (!valid) return { error: 'Неверный email или пароль' }
+  if (!valid) return { error: 'Invalid email or password' }
 
   const token = await createSession({ userId: user.id, email: user.email })
   await setSessionCookie(token)
@@ -72,20 +75,20 @@ export async function createProfileAction(_prev: ActionResult, formData: FormDat
   if (!session) redirect('/login')
 
   const title = (formData.get('title') as string)?.trim()
-  if (!title) return { error: 'Введите название профиля' }
+  if (!title) return { error: 'Enter profile title' }
 
-  const db = getDb()
+  const db = await getDb()
   const id = generateId()
   const requestedSlug = (formData.get('public_slug') as string)?.trim() || title
-  const publicSlug = createUniqueSlug(db, requestedSlug, id)
+  const publicSlug = await createUniqueSlug(db, requestedSlug, id)
 
-  db.prepare(`
+  await run(db, `
     INSERT INTO career_profiles (
       id, user_id, title, public_slug, is_public,
       first_name, last_name, role, bio, skills, location, contact_email, website_url
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `, [
     id,
     session.userId,
     title,
@@ -99,7 +102,7 @@ export async function createProfileAction(_prev: ActionResult, formData: FormDat
     (formData.get('location') as string) || '',
     (formData.get('contact_email') as string) || '',
     (formData.get('website_url') as string) || '',
-  )
+  ])
 
   revalidatePath('/')
   revalidatePath('/dashboard')
@@ -111,20 +114,17 @@ export async function updateProfileAction(_prev: ActionResult, formData: FormDat
   if (!session) redirect('/login')
 
   const profileId = formData.get('profileId') as string
-  const db = getDb()
-
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
-
   const title = (formData.get('title') as string)?.trim()
-  if (!title) return { error: 'Введите название профиля' }
+  if (!title) return { error: 'Enter profile title' }
+
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const requestedSlug = (formData.get('public_slug') as string)?.trim() || title
-  const publicSlug = createUniqueSlug(db, requestedSlug, profileId)
+  const publicSlug = await createUniqueSlug(db, requestedSlug, profileId)
 
-  db.prepare(`
+  await run(db, `
     UPDATE career_profiles
     SET
       title=?,
@@ -140,7 +140,7 @@ export async function updateProfileAction(_prev: ActionResult, formData: FormDat
       website_url=?,
       updated_at=datetime('now')
     WHERE id=? AND user_id=?
-  `).run(
+  `, [
     title,
     publicSlug,
     formData.get('is_public') === 'on' ? 1 : 0,
@@ -154,7 +154,7 @@ export async function updateProfileAction(_prev: ActionResult, formData: FormDat
     (formData.get('website_url') as string) || '',
     profileId,
     session.userId,
-  )
+  ])
 
   revalidatePath('/')
   revalidatePath(`/p/${profile.public_slug}`)
@@ -168,14 +168,12 @@ export async function deleteProfileAction(profileId: string): Promise<ActionResu
   const session = await getCurrentUser()
   if (!session) redirect('/login')
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
-  db.prepare('DELETE FROM career_profiles WHERE id = ? AND user_id = ?').run(profileId, session.userId)
-  deleteDirectory(getProfilePath(session.userId, profileId))
+  await run(db, 'DELETE FROM career_profiles WHERE id = ? AND user_id = ?', [profileId, session.userId])
+  await deleteDirectory(getProfilePath(session.userId, profileId))
 
   revalidatePath('/')
   revalidatePath(`/p/${profile.public_slug}`)
@@ -185,32 +183,29 @@ export async function deleteProfileAction(profileId: string): Promise<ActionResu
 
 export async function uploadResumeAction(formData: FormData): Promise<ActionResult> {
   const session = await getCurrentUser()
-  if (!session) return { error: 'Не авторизован' }
+  if (!session) return { error: 'Not authorized' }
 
   const profileId = formData.get('profileId') as string
   const file = formData.get('file') as File
 
-  if (!file || file.size === 0) return { error: 'Выберите файл' }
+  if (!file || file.size === 0) return { error: 'Choose a file' }
 
   const validationError = validateFile(file, 'resume')
   if (validationError) return { error: validationError }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const dirPath = getResumePath(session.userId, profileId)
-  clearDirectory(dirPath)
-
+  await clearDirectory(dirPath)
   const filePath = await saveFile(file, dirPath, 'resume')
 
-  db.prepare(`
+  await run(db, `
     UPDATE career_profiles
     SET resume_file_path=?, resume_file_name=?, resume_uploaded_at=datetime('now'), show_resume_public=1, updated_at=datetime('now')
     WHERE id=? AND user_id=?
-  `).run(filePath, file.name, profileId, session.userId)
+  `, [filePath, file.name, profileId, session.userId])
 
   revalidatePath(`/dashboard/profile/${profileId}`)
   revalidatePath(`/p/${profile.public_slug}`)
@@ -219,20 +214,18 @@ export async function uploadResumeAction(formData: FormData): Promise<ActionResu
 
 export async function deleteResumeAction(profileId: string): Promise<ActionResult> {
   const session = await getCurrentUser()
-  if (!session) return { error: 'Не авторизован' }
+  if (!session) return { error: 'Not authorized' }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
-  deleteDirectory(getResumePath(session.userId, profileId))
-  db.prepare(`
+  await deleteDirectory(getResumePath(session.userId, profileId))
+  await run(db, `
     UPDATE career_profiles
     SET resume_file_path=NULL, resume_file_name=NULL, resume_uploaded_at=NULL, show_resume_public=0, updated_at=datetime('now')
     WHERE id=? AND user_id=?
-  `).run(profileId, session.userId)
+  `, [profileId, session.userId])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -242,19 +235,17 @@ export async function deleteResumeAction(profileId: string): Promise<ActionResul
 
 export async function setResumePublicAction(profileId: string, visible: boolean): Promise<ActionResult> {
   const session = await getCurrentUser()
-  if (!session) return { error: 'Не авторизован' }
+  if (!session) return { error: 'Not authorized' }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
-  db.prepare(`
+  await run(db, `
     UPDATE career_profiles
     SET show_resume_public=?, updated_at=datetime('now')
     WHERE id=? AND user_id=? AND resume_file_path IS NOT NULL
-  `).run(visible ? 1 : 0, profileId, session.userId)
+  `, [visible ? 1 : 0, profileId, session.userId])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -264,31 +255,29 @@ export async function setResumePublicAction(profileId: string, visible: boolean)
 
 export async function uploadAvatarAction(formData: FormData): Promise<ActionResult> {
   const session = await getCurrentUser()
-  if (!session) return { error: 'Не авторизован' }
+  if (!session) return { error: 'Not authorized' }
 
   const profileId = formData.get('profileId') as string
   const file = formData.get('file') as File
 
-  if (!file || file.size === 0) return { error: 'Выберите фото' }
+  if (!file || file.size === 0) return { error: 'Choose a photo' }
 
   const validationError = validateFile(file, 'avatar')
   if (validationError) return { error: validationError }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const dirPath = getAvatarPath(session.userId, profileId)
-  clearDirectory(dirPath)
+  await clearDirectory(dirPath)
   const filePath = await saveFile(file, dirPath, 'avatar')
 
-  db.prepare(`
+  await run(db, `
     UPDATE career_profiles
     SET avatar_file_path=?, avatar_file_name=?, avatar_uploaded_at=datetime('now'), updated_at=datetime('now')
     WHERE id=? AND user_id=?
-  `).run(filePath, file.name, profileId, session.userId)
+  `, [filePath, file.name, profileId, session.userId])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -298,20 +287,18 @@ export async function uploadAvatarAction(formData: FormData): Promise<ActionResu
 
 export async function deleteAvatarAction(profileId: string): Promise<ActionResult> {
   const session = await getCurrentUser()
-  if (!session) return { error: 'Не авторизован' }
+  if (!session) return { error: 'Not authorized' }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
-  deleteDirectory(getAvatarPath(session.userId, profileId))
-  db.prepare(`
+  await deleteDirectory(getAvatarPath(session.userId, profileId))
+  await run(db, `
     UPDATE career_profiles
     SET avatar_file_path=NULL, avatar_file_name=NULL, avatar_uploaded_at=NULL, updated_at=datetime('now')
     WHERE id=? AND user_id=?
-  `).run(profileId, session.userId)
+  `, [profileId, session.userId])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -325,11 +312,9 @@ export async function saveProfileLinksAction(_prev: ActionResult, formData: Form
 
   const profileId = formData.get('profileId') as string
   const linkCount = Number(formData.get('linkCount') || 0)
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const links: { label: string; url: string; isPublic: number; sortOrder: number }[] = []
   for (let index = 0; index < linkCount; index += 1) {
@@ -337,7 +322,7 @@ export async function saveProfileLinksAction(_prev: ActionResult, formData: Form
     if (!rawUrl) continue
 
     const url = normalizeUrl(rawUrl)
-    if (!url) return { error: 'Проверьте ссылки: разрешены только http и https адреса' }
+    if (!url) return { error: 'Check links: only http and https URLs are allowed' }
 
     const rawLabel = (formData.get(`label_${index}`) as string | null)?.trim()
     links.push({
@@ -348,17 +333,16 @@ export async function saveProfileLinksAction(_prev: ActionResult, formData: Form
     })
   }
 
-  const transaction = db.transaction(() => {
-    db.prepare('DELETE FROM profile_links WHERE career_profile_id = ? AND user_id = ?').run(profileId, session.userId)
-    const insert = db.prepare(`
-      INSERT INTO profile_links (id, user_id, career_profile_id, label, url, is_public, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `)
-    for (const link of links) {
-      insert.run(generateId(), session.userId, profileId, link.label, link.url, link.isPublic, link.sortOrder)
-    }
-  })
-  transaction()
+  await batch(db, [
+    { sql: 'DELETE FROM profile_links WHERE career_profile_id = ? AND user_id = ?', args: [profileId, session.userId] },
+    ...links.map(link => ({
+      sql: `
+        INSERT INTO profile_links (id, user_id, career_profile_id, label, url, is_public, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [generateId(), session.userId, profileId, link.label, link.url, link.isPublic, link.sortOrder],
+    })),
+  ])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -372,13 +356,11 @@ export async function createProjectAction(_prev: ActionResult, formData: FormDat
 
   const profileId = formData.get('profileId') as string
   const title = (formData.get('title') as string)?.trim()
-  if (!title) return { error: 'Введите название проекта' }
+  if (!title) return { error: 'Enter project title' }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const file = formData.get('file') as File
   if (file && file.size > 0) {
@@ -390,31 +372,32 @@ export async function createProjectAction(_prev: ActionResult, formData: FormDat
   const links = collectProjectLinks(formData)
   if (links.error) return { error: links.error }
 
-  const transaction = db.transaction(() => {
-    db.prepare(`
-      INSERT INTO portfolio_projects (id, user_id, career_profile_id, title, role, description, skills, project_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, '')
-    `).run(
-      id,
-      session.userId,
-      profileId,
-      title,
-      (formData.get('role') as string) || '',
-      (formData.get('description') as string) || '',
-      (formData.get('skills') as string) || '',
-    )
-
-    insertProjectLinks(db, session.userId, id, links.items)
-  })
-  transaction()
+  await batch(db, [
+    {
+      sql: `
+        INSERT INTO portfolio_projects (id, user_id, career_profile_id, title, role, description, skills, project_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, '')
+      `,
+      args: [
+        id,
+        session.userId,
+        profileId,
+        title,
+        (formData.get('role') as string) || '',
+        (formData.get('description') as string) || '',
+        (formData.get('skills') as string) || '',
+      ],
+    },
+    ...projectLinkStatements(session.userId, id, links.items),
+  ])
 
   if (file && file.size > 0) {
     const dirPath = getProjectPath(session.userId, profileId, id)
     const filePath = await saveFile(file, dirPath, 'content')
-    db.prepare(`
+    await run(db, `
       INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(generateId(), session.userId, id, filePath, file.name, file.type)
+    `, [generateId(), session.userId, id, filePath, file.name, file.type])
   }
 
   revalidatePath('/')
@@ -430,16 +413,16 @@ export async function updateProjectAction(_prev: ActionResult, formData: FormDat
   const projectId = formData.get('projectId') as string
   const profileId = formData.get('profileId') as string
   const title = (formData.get('title') as string)?.trim()
-  if (!title) return { error: 'Введите название проекта' }
+  if (!title) return { error: 'Enter project title' }
 
-  const db = getDb()
-  const project = db.prepare(`
+  const db = await getDb()
+  const project = await getOne<{ id: string; public_slug: string }>(db, `
     SELECT pp.id, cp.public_slug
     FROM portfolio_projects pp
     JOIN career_profiles cp ON cp.id = pp.career_profile_id
     WHERE pp.id = ? AND pp.user_id = ?
-  `).get(projectId, session.userId) as { id: string; public_slug: string } | undefined
-  if (!project) return { error: 'Проект не найден' }
+  `, [projectId, session.userId])
+  if (!project) return { error: 'Project not found' }
 
   const file = formData.get('file') as File
   if (file && file.size > 0) {
@@ -450,34 +433,40 @@ export async function updateProjectAction(_prev: ActionResult, formData: FormDat
   const links = collectProjectLinks(formData)
   if (links.error) return { error: links.error }
 
-  const transaction = db.transaction(() => {
-    db.prepare(`
-      UPDATE portfolio_projects
-      SET title=?, role=?, description=?, skills=?, project_url='', updated_at=datetime('now')
-      WHERE id=? AND user_id=?
-    `).run(
-      title,
-      (formData.get('role') as string) || '',
-      (formData.get('description') as string) || '',
-      (formData.get('skills') as string) || '',
-      projectId,
-      session.userId,
-    )
-
-    db.prepare('DELETE FROM project_links WHERE project_id = ? AND user_id = ?').run(projectId, session.userId)
-    insertProjectLinks(db, session.userId, projectId, links.items)
-  })
-  transaction()
+  await batch(db, [
+    {
+      sql: `
+        UPDATE portfolio_projects
+        SET title=?, role=?, description=?, skills=?, project_url='', updated_at=datetime('now')
+        WHERE id=? AND user_id=?
+      `,
+      args: [
+        title,
+        (formData.get('role') as string) || '',
+        (formData.get('description') as string) || '',
+        (formData.get('skills') as string) || '',
+        projectId,
+        session.userId,
+      ],
+    },
+    { sql: 'DELETE FROM project_links WHERE project_id = ? AND user_id = ?', args: [projectId, session.userId] },
+    ...projectLinkStatements(session.userId, projectId, links.items),
+  ])
 
   if (file && file.size > 0) {
     const dirPath = getProjectPath(session.userId, profileId, projectId)
-    deleteDirectory(dirPath)
+    await deleteDirectory(dirPath)
     const filePath = await saveFile(file, dirPath, 'content')
-    db.prepare('DELETE FROM project_files WHERE project_id = ?').run(projectId)
-    db.prepare(`
-      INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(generateId(), session.userId, projectId, filePath, file.name, file.type)
+    await batch(db, [
+      { sql: 'DELETE FROM project_files WHERE project_id = ?', args: [projectId] },
+      {
+        sql: `
+          INSERT INTO project_files (id, user_id, project_id, file_path, file_name, file_type)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        args: [generateId(), session.userId, projectId, filePath, file.name, file.type],
+      },
+    ])
   }
 
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -489,17 +478,17 @@ export async function deleteProjectAction(projectId: string, profileId: string):
   const session = await getCurrentUser()
   if (!session) redirect('/login')
 
-  const db = getDb()
-  const project = db.prepare(`
+  const db = await getDb()
+  const project = await getOne<{ id: string; public_slug: string }>(db, `
     SELECT pp.id, cp.public_slug
     FROM portfolio_projects pp
     JOIN career_profiles cp ON cp.id = pp.career_profile_id
     WHERE pp.id = ? AND pp.user_id = ?
-  `).get(projectId, session.userId) as { id: string; public_slug: string } | undefined
-  if (!project) return { error: 'Проект не найден' }
+  `, [projectId, session.userId])
+  if (!project) return { error: 'Project not found' }
 
-  db.prepare('DELETE FROM portfolio_projects WHERE id = ? AND user_id = ?').run(projectId, session.userId)
-  deleteDirectory(getProjectPath(session.userId, profileId, projectId))
+  await run(db, 'DELETE FROM portfolio_projects WHERE id = ? AND user_id = ?', [projectId, session.userId])
+  await deleteDirectory(getProjectPath(session.userId, profileId, projectId))
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -513,13 +502,11 @@ export async function createCertificateAction(_prev: ActionResult, formData: For
 
   const profileId = formData.get('profileId') as string
   const title = (formData.get('title') as string)?.trim()
-  if (!title) return { error: 'Введите название сертификата' }
+  if (!title) return { error: 'Enter certificate title' }
 
-  const db = getDb()
-  const profile = db.prepare('SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?').get(profileId, session.userId) as
-    | { id: string; public_slug: string }
-    | undefined
-  if (!profile) return { error: 'Профиль не найден' }
+  const db = await getDb()
+  const profile = await getOwnedProfile(db, profileId, session.userId)
+  if (!profile) return { error: 'Profile not found' }
 
   const file = formData.get('file') as File
   if (file && file.size > 0) {
@@ -539,13 +526,13 @@ export async function createCertificateAction(_prev: ActionResult, formData: For
     fileType = file.type || null
   }
 
-  db.prepare(`
+  await run(db, `
     INSERT INTO certificates (
       id, user_id, career_profile_id, title, issuer, issued_at,
       credential_url, description, file_path, file_name, file_type
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `, [
     id,
     session.userId,
     profileId,
@@ -557,7 +544,7 @@ export async function createCertificateAction(_prev: ActionResult, formData: For
     filePath,
     fileName,
     fileType,
-  )
+  ])
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -569,17 +556,17 @@ export async function deleteCertificateAction(certificateId: string, profileId: 
   const session = await getCurrentUser()
   if (!session) redirect('/login')
 
-  const db = getDb()
-  const certificate = db.prepare(`
+  const db = await getDb()
+  const certificate = await getOne<{ id: string; public_slug: string }>(db, `
     SELECT c.id, cp.public_slug
     FROM certificates c
     JOIN career_profiles cp ON cp.id = c.career_profile_id
     WHERE c.id = ? AND c.user_id = ?
-  `).get(certificateId, session.userId) as { id: string; public_slug: string } | undefined
-  if (!certificate) return { error: 'Сертификат не найден' }
+  `, [certificateId, session.userId])
+  if (!certificate) return { error: 'Certificate not found' }
 
-  db.prepare('DELETE FROM certificates WHERE id = ? AND user_id = ?').run(certificateId, session.userId)
-  deleteDirectory(getCertificatePath(session.userId, profileId, certificateId))
+  await run(db, 'DELETE FROM certificates WHERE id = ? AND user_id = ?', [certificateId, session.userId])
+  await deleteDirectory(getCertificatePath(session.userId, profileId, certificateId))
 
   revalidatePath('/')
   revalidatePath(`/dashboard/profile/${profileId}`)
@@ -623,7 +610,7 @@ function collectProjectLinks(formData: FormData): {
 
     const url = normalizeUrl(rawUrl)
     if (!url) {
-      return { items: [], error: 'Проверьте ссылки проекта: разрешены только http и https адреса' }
+      return { items: [], error: 'Check project links: only http and https URLs are allowed' }
     }
 
     const rawLabel = (formData.get(`link_label_${index}`) as string | null)?.trim()
@@ -637,20 +624,22 @@ function collectProjectLinks(formData: FormData): {
   return { items }
 }
 
-function insertProjectLinks(
-  db: ReturnType<typeof getDb>,
+function projectLinkStatements(
   userId: string,
   projectId: string,
   links: { label: string; url: string; sortOrder: number }[],
 ) {
-  const insert = db.prepare(`
-    INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `)
+  return links.map(link => ({
+    sql: `
+      INSERT INTO project_links (id, user_id, project_id, label, url, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+    args: [generateId(), userId, projectId, link.label, link.url, link.sortOrder],
+  }))
+}
 
-  for (const link of links) {
-    insert.run(generateId(), userId, projectId, link.label, link.url, link.sortOrder)
-  }
+async function getOwnedProfile(db: Awaited<ReturnType<typeof getDb>>, profileId: string, userId: string): Promise<OwnedProfile | null> {
+  return getOne<OwnedProfile>(db, 'SELECT id, public_slug FROM career_profiles WHERE id = ? AND user_id = ?', [profileId, userId])
 }
 
 export async function normalizeSlugAction(value: string): Promise<string> {

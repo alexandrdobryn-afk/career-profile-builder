@@ -3,10 +3,10 @@ services:
     build: .
     ports:
       - "3012:3000"
-    volumes:
-      - ./data:/app/data          # SQLite database
-      - ./uploads:/app/uploads    # User files
     environment:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET:?Set JWT_SECRET in .env before starting the app}
+      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:?Set TURSO_DATABASE_URL in .env before starting the app}
+      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:?Set TURSO_AUTH_TOKEN in .env before starting the app}
+      - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN:?Set BLOB_READ_WRITE_TOKEN in .env before starting the app}
     restart: unless-stopped

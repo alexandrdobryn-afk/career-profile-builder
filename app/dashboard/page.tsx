@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const lang = await getRequestLang()
   const copy = t(lang)
 
-  const profiles = getProfiles(session.userId)
+  const profiles = await getProfiles(session.userId)
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--surface)',
