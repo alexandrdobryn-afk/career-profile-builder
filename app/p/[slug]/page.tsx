@@ -60,8 +60,8 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Topbar showAuth />
-      <main style={{ flex: 1, maxWidth: 1040, width: '100%', margin: '0 auto', padding: '32px 24px' }}>
-        <section style={{
+      <main className="page-shell" style={{ flex: 1, maxWidth: 1040, width: '100%', margin: '0 auto', padding: '32px 24px' }}>
+        <section className="public-hero" style={{
           ...card,
           marginBottom: 16,
           display: 'grid',
@@ -70,13 +70,13 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           alignItems: 'center',
         }}>
           <div>
-            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.6px', marginBottom: 6 }}>{name}</h1>
+            <h1 className="profile-title" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-.6px', marginBottom: 6 }}>{name}</h1>
             <div style={{ fontSize: 16, color: 'var(--accent)', fontWeight: 700, marginBottom: 6 }}>{profile.title}</div>
             {profile.role && <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 6 }}>{profile.role}</div>}
             {profile.location && <div style={{ fontSize: 13, color: 'var(--text3)' }}>{profile.location}</div>}
           </div>
           {avatarUrl && (
-            <div style={{
+            <div className="public-avatar" style={{
               width: 180,
               height: 180,
               borderRadius: '50%',
@@ -98,7 +98,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           )}
         </section>
 
-        <div style={{
+        <div className="public-layout" style={{
           display: 'grid',
           gridTemplateColumns: hasSidebar ? 'minmax(0,1fr) 300px' : 'minmax(0,1fr)',
           gap: 16,

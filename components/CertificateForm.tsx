@@ -37,7 +37,7 @@ export function CertificateForm({ profileId }: { profileId: string }) {
         }}>{copy.dashboard.certificate.added}</div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ marginBottom: 12 }}>
           <label>{copy.dashboard.certificate.title}</label>
           <input name="title" required placeholder="AI Automation Certificate" />
@@ -48,7 +48,7 @@ export function CertificateForm({ profileId }: { profileId: string }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ marginBottom: 12 }}>
           <label>{copy.dashboard.certificate.date}</label>
           <input type="month" name="issued_at" />
@@ -73,7 +73,7 @@ export function CertificateForm({ profileId }: { profileId: string }) {
         onChange={event => setFilePreview(event.target.files?.[0]?.name || null)}
       />
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="form-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}

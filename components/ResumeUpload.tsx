@@ -70,14 +70,14 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
           minWidth: 0,
           overflow: 'hidden',
         }}>
-          <div style={{
+          <div className="resume-card" style={{
             display: 'grid',
             gridTemplateColumns: '36px minmax(0, 1fr)',
             alignItems: 'center',
             gap: 12,
             minWidth: 0,
           }}>
-            <div style={{
+            <div className="resume-actions" style={{
               width: 36,
               height: 36,
               background: 'var(--accent-bg)',
@@ -199,7 +199,7 @@ export function ResumeUpload({ profileId, currentResume }: ResumeUploadProps) {
             }}>
               {copy.dashboard.selectedFile}: {preview}
             </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="form-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button type="button" onClick={() => { setPreview(null); if (fileRef.current) fileRef.current.value = '' }}
                 style={{
                   background: 'transparent',

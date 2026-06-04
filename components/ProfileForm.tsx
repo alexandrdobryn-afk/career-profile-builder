@@ -28,7 +28,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
   const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
 
   return (
-    <div style={{
+    <div className="form-panel" style={{
       background: 'var(--surface)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius)', padding: '24px', maxWidth: 680,
     }}>
@@ -43,7 +43,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
       <form action={formAction}>
         {profile && <input type="hidden" name="profileId" value={profile.id} />}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 12, alignItems: 'end', marginBottom: 16 }}>
+        <div className="profile-slug-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 12, alignItems: 'end', marginBottom: 16 }}>
           <div>
             <label>{copy.dashboard.profileTitle}</label>
             <input name="title" required placeholder="AI Automation Developer" defaultValue={profile?.title} />
@@ -66,7 +66,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
 
         <div style={{ marginBottom: 16 }}>
           <label>{copy.dashboard.publicLink}</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
+          <div className="field-prefix-grid" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
             <span style={{
               background: 'var(--surface2)', border: '0.5px solid var(--border)',
               borderRight: 0, borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)',
@@ -81,7 +81,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ marginBottom: 16 }}>
             <label>{copy.dashboard.firstName}</label>
             <input name="first_name" placeholder="Ivan" defaultValue={profile?.first_name} />
@@ -107,7 +107,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
           <input name="skills" placeholder="Python, OpenAI API, Make.com, FastAPI" defaultValue={profile?.skills} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ marginBottom: 20 }}>
             <label>{copy.dashboard.location}</label>
             <input name="location" placeholder="Kyiv / Remote" defaultValue={profile?.location} />
@@ -118,7 +118,7 @@ export function ProfileForm({ profile }: { profile?: Profile }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="form-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link href={profile ? `/dashboard/profile/${profile.id}` : '/dashboard'} style={{
             padding: '9px 20px', border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-sm)', fontSize: 14, color: 'var(--text2)',

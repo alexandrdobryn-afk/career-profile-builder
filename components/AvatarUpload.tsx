@@ -43,7 +43,7 @@ export function AvatarUpload({ profileId, currentAvatar }: AvatarUploadProps) {
 
   return (
     <div>
-      <div style={{
+      <div className="avatar-upload-grid" style={{
         display: 'grid',
         gridTemplateColumns: '96px minmax(0, 1fr)',
         gap: 14,

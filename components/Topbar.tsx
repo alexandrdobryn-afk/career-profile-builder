@@ -36,7 +36,7 @@ function TopbarContent({ showAuth, showDashboard, showLogout }: TopbarProps) {
   }
 
   return (
-    <header style={{
+    <header className="topbar" style={{
       background: 'var(--surface)',
       borderBottom: '0.5px solid var(--border)',
       position: 'sticky',
@@ -55,7 +55,7 @@ function TopbarContent({ showAuth, showDashboard, showLogout }: TopbarProps) {
         </span>
       </Link>
 
-      <form onSubmit={submitSearch} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 6 }}>
+      <form className="topbar-search" onSubmit={submitSearch} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 6 }}>
         <input
           value={query}
           onChange={event => setQuery(event.target.value)}
@@ -76,7 +76,7 @@ function TopbarContent({ showAuth, showDashboard, showLogout }: TopbarProps) {
         </button>
       </form>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+      <div className="topbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
         <button
           onClick={toggle}
           aria-label={copy.nav.theme}
@@ -176,7 +176,7 @@ function TopbarContent({ showAuth, showDashboard, showLogout }: TopbarProps) {
 
 function TopbarShell({ showAuth, showDashboard, showLogout }: TopbarProps) {
   return (
-    <header style={{
+    <header className="topbar topbar-shell" style={{
       background: 'var(--surface)',
       borderBottom: '0.5px solid var(--border)',
       minHeight: '58px',
@@ -188,7 +188,7 @@ function TopbarShell({ showAuth, showDashboard, showLogout }: TopbarProps) {
       <Link href="/" style={{ textDecoration: 'none' }}>
         <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent)' }}>JobProfile</span>
       </Link>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="topbar-actions" style={{ display: 'flex', gap: 8 }}>
         {showDashboard && <Link href="/dashboard" style={navLinkStyle}>Dashboard</Link>}
         {showAuth && <Link href="/login" style={navLinkStyle}>Sign in</Link>}
         {showLogout && <span style={navLinkStyle}>...</span>}

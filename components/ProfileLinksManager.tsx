@@ -46,7 +46,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
   }
 
   return (
-    <div style={{
+    <div className="form-panel" style={{
       background: 'var(--surface)',
       border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius)',
@@ -138,7 +138,7 @@ export function ProfileLinksManager({ profileId, links }: { profileId: string; l
               display: 'grid',
               gap: 8,
             }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '130px minmax(0,1fr) auto', gap: 8, alignItems: 'center' }}>
+              <div className="profile-link-row" style={{ display: 'grid', gridTemplateColumns: '130px minmax(0,1fr) auto', gap: 8, alignItems: 'center' }}>
                 <input
                   name={`label_${index}`}
                   placeholder="LinkedIn"

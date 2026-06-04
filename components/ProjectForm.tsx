@@ -88,7 +88,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
   }
 
   return (
-    <div style={{
+    <div className="form-panel" style={{
       background: 'var(--surface)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius)', padding: '24px', maxWidth: 720,
     }}>
@@ -175,7 +175,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
           {links.length > 0 && (
             <div style={{ display: 'grid', gap: 10 }}>
               {links.map((link, index) => (
-                <div key={`${link.id || 'new'}-${index}`} style={{
+                <div className="project-link-row" key={`${link.id || 'new'}-${index}`} style={{
                   display: 'grid',
                   gridTemplateColumns: '150px minmax(0,1fr) auto',
                   gap: 8,
@@ -220,7 +220,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
           {visibleExistingFiles.length > 0 && (
             <div style={{ display: 'grid', gap: 8, marginBottom: 10 }}>
               {visibleExistingFiles.map(file => (
-                <div key={file.id} style={{
+                <div className="file-row" key={file.id} style={{
                   display: 'grid',
                   gridTemplateColumns: 'minmax(0,1fr) auto',
                   gap: 8,
@@ -288,7 +288,7 @@ export function ProjectForm({ profileId, project }: { profileId: string; project
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div className="form-actions" style={{ display: 'flex', gap: 10 }}>
           <Link href={`/dashboard/profile/${profileId}`} style={{
             padding: '9px 20px', border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-sm)', fontSize: 14, color: 'var(--text2)',

@@ -25,7 +25,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="section-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.3px' }}>{copy.dashboard.myProfiles}</h1>
           <p style={{ color: 'var(--text2)', fontSize: 13, marginTop: 4 }}>

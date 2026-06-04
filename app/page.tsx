@@ -28,11 +28,11 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Topbar showAuth={!session} showDashboard={!!session} />
-      <main style={{ flex: 1, maxWidth: 1080, width: '100%', margin: '0 auto', padding: '34px 24px' }}>
+      <main className="page-shell" style={{ flex: 1, maxWidth: 1080, width: '100%', margin: '0 auto', padding: '34px 24px' }}>
         {!query ? (
           <section style={{ display: 'grid', gap: 16 }}>
-            <div style={{ ...panel, padding: 30 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.3px', marginBottom: 12 }}>
+            <div className="panel" style={{ ...panel, padding: 30 }}>
+              <h1 className="page-title" style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-.3px', marginBottom: 12 }}>
                 {copy.home.aboutTitle}
               </h1>
               <p style={{ color: 'var(--text2)', fontSize: 16, maxWidth: 760, lineHeight: 1.65 }}>
@@ -82,7 +82,7 @@ export default async function HomePage({ searchParams }: Props) {
           </section>
         ) : (
           <section>
-            <div style={{
+            <div className="section-toolbar" style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',

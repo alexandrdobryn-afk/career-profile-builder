@@ -9,7 +9,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Topbar showLogout />
-      <main style={{ flex: 1, maxWidth: 900, width: '100%', margin: '0 auto', padding: '28px 24px' }}>
+      <main className="page-shell dashboard-shell" style={{ flex: 1, maxWidth: 900, width: '100%', margin: '0 auto', padding: '28px 24px' }}>
         {children}
       </main>
     </div>

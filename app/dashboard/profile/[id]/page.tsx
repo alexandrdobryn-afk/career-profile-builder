@@ -65,7 +65,7 @@ export default async function ProfilePage({ params }: Props) {
         <span style={{ color: 'var(--text)' }}>{profile.title}</span>
       </div>
 
-      <div style={{
+      <div className="dashboard-profile-layout" style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0,1fr) 290px',
         gap: 20,
@@ -73,7 +73,7 @@ export default async function ProfilePage({ params }: Props) {
       }}>
         <div>
           <div style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
+            <div className="section-toolbar" style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.3px' }}>
                   {[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.title}
@@ -132,7 +132,7 @@ export default async function ProfilePage({ params }: Props) {
           </div>
 
           <div style={card}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div className="section-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={sectionTitle}>{copy.dashboard.portfolio}</div>
               <Link href={`/dashboard/profile/${id}/project/new`} style={{
                 background: 'var(--accent)',
@@ -202,7 +202,7 @@ export default async function ProfilePage({ params }: Props) {
                         <div style={{ fontSize: 15, fontWeight: 600 }}>{project.title}</div>
                         {project.role && <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>{project.role}</div>}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <div className="project-card-actions" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                         <Link href={`/dashboard/profile/${id}/project/${project.id}`} style={{
                           background: 'transparent',
                           border: '0.5px solid var(--border)',

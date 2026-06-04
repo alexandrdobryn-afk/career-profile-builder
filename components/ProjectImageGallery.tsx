@@ -98,6 +98,7 @@ export function ProjectImageGallery({ images, title }: { images: GalleryImage[];
           onMouseDown={event => {
             if (event.target === event.currentTarget) close()
           }}
+          className="lightbox-backdrop"
           style={{
             position: 'fixed',
             inset: 0,
@@ -108,7 +109,7 @@ export function ProjectImageGallery({ images, title }: { images: GalleryImage[];
             padding: 20,
           }}
         >
-          <div style={{
+          <div className="lightbox-frame" style={{
             position: 'relative',
             width: 'min(100%, 980px)',
             height: 'min(82vh, 680px)',
@@ -133,7 +134,7 @@ export function ProjectImageGallery({ images, title }: { images: GalleryImage[];
               aria-label="Close"
               style={iconButtonStyle('top', 'right')}
             >
-              ×
+              x
             </button>
 
             {hasMany && (
@@ -144,7 +145,7 @@ export function ProjectImageGallery({ images, title }: { images: GalleryImage[];
                   aria-label="Previous image"
                   style={iconButtonStyle('middle', 'left')}
                 >
-                  ‹
+                  &lt;
                 </button>
                 <button
                   type="button"
@@ -152,7 +153,7 @@ export function ProjectImageGallery({ images, title }: { images: GalleryImage[];
                   aria-label="Next image"
                   style={iconButtonStyle('middle', 'right')}
                 >
-                  ›
+                  &gt;
                 </button>
               </>
             )}
