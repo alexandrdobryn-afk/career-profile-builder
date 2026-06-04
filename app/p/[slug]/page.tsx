@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
+import { ProjectImageGallery } from '@/components/ProjectImageGallery'
 import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 import { t } from '@/lib/i18n'
@@ -141,37 +142,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                         padding: 16,
                       }}>
                         {imageFiles.length > 0 && (
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: imageFiles.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))',
-                            gap: 8,
-                            marginBottom: 12,
-                          }}>
-                            {imageFiles.map(file => (
-                              <a
-                                key={file.id}
-                                href={file.public_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  height: 180,
-                                  borderRadius: 'var(--radius-sm)',
-                                  overflow: 'hidden',
-                                  background: 'var(--surface2)',
-                                  display: 'block',
-                                }}
-                              >
-                                <Image
-                                  src={file.public_url}
-                                  alt={file.file_name || project.title}
-                                  width={820}
-                                  height={420}
-                                  unoptimized
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                />
-                              </a>
-                            ))}
-                          </div>
+                          <ProjectImageGallery images={imageFiles} title={project.title} />
                         )}
                         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{project.title}</h2>
                         {project.role && <div style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{project.role}</div>}
