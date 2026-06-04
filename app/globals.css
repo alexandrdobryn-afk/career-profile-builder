@@ -104,6 +104,19 @@ label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); 
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
+.mobile-only-button {
+  display: none;
+}
+
+.public-main-item {
+  grid-column: 1;
+}
+
+.public-sidebar {
+  grid-column: 2;
+  grid-row: 1 / span 10;
+}
+
 @media (max-width: 768px) {
   .page-shell,
   .dashboard-shell {
@@ -118,24 +131,26 @@ label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); 
     min-height: 0 !important;
   }
 
+  .topbar > a {
+    order: 1;
+  }
+
   .topbar-shell {
     display: grid !important;
   }
 
   .topbar-search {
     grid-template-columns: minmax(0, 1fr) auto !important;
+    order: 3;
     width: 100%;
   }
 
   .topbar-actions {
+    order: 2;
     justify-content: flex-start !important;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: visible;
     padding-bottom: 2px;
-    scrollbar-width: none;
-  }
-
-  .topbar-actions::-webkit-scrollbar {
-    display: none;
   }
 
   .topbar-actions a,
@@ -174,17 +189,59 @@ label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); 
   .public-hero {
     grid-template-columns: minmax(0, 1fr) !important;
     padding: 20px !important;
+    text-align: center;
   }
 
   .public-avatar {
     width: 132px !important;
     height: 132px !important;
-    justify-self: start !important;
+    justify-self: center !important;
   }
 
   .public-layout,
   .dashboard-profile-layout {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .public-main-item,
+  .public-sidebar {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .public-info-card {
+    order: 1;
+  }
+
+  .public-sidebar {
+    order: 2;
+  }
+
+  .public-skills-item {
+    order: 3;
+  }
+
+  .public-portfolio-item {
+    order: 4;
+  }
+
+  .public-certificates-item {
+    order: 5;
+  }
+
+  .mobile-only-button {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .skills-cloud {
+    max-height: 118px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .skills-cloud-expanded {
+    max-height: none;
   }
 
   .dashboard-profile-layout aside {

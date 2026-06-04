@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { PublicPortfolio } from '@/components/PublicPortfolio'
+import { PublicSkills } from '@/components/PublicSkills'
 import { SiteFooter } from '@/components/SiteFooter'
 import { Topbar } from '@/components/Topbar'
 import { t } from '@/lib/i18n'
@@ -52,7 +53,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
   const avatarUrl = getAvatarUrl(profile)
   const skills = profile.skills ? profile.skills.split(',').map(skill => skill.trim()).filter(Boolean) : []
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.title
-  const hasInfo = Boolean(profile.bio || skills.length > 0)
+  const hasInfo = Boolean(profile.bio)
   const hasContacts = Boolean(profile.contact_email)
   const hasActions = Boolean(resumeUrl || projects.length > 0)
   const hasSidebar = hasActions || hasContacts || links.length > 0
@@ -104,29 +105,26 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           gap: 16,
           alignItems: 'start',
         }}>
-          <div style={{ display: 'grid', gap: 16 }}>
-            {hasInfo && (
-              <section style={card}>
+          {hasInfo && (
+              <section className="public-main-item public-info-card" style={card}>
                 <div style={sectionTitle}>{copy.public.info}</div>
-                {profile.bio && <p style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--text2)', marginBottom: 16 }}>{profile.bio}</p>}
-                {skills.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                    {skills.map(skill => (
-                      <span key={skill} style={{
-                        fontSize: 12,
-                        background: 'var(--surface2)',
-                        border: '0.5px solid var(--border)',
-                        color: 'var(--text2)',
-                        padding: '5px 10px',
-                        borderRadius: 20,
-                      }}>{skill}</span>
-                    ))}
-                  </div>
-                )}
+                <p style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--text2)' }}>{profile.bio}</p>
               </section>
             )}
 
-            {projects.length > 0 && (
+          {skills.length > 0 && (
+            <div className="public-main-item public-skills-item">
+              <PublicSkills
+                skills={skills}
+                title={copy.dashboard.skills}
+                showLabel={copy.public.showAllSkills}
+                hideLabel={copy.public.collapseSkills}
+              />
+            </div>
+          )}
+
+          {projects.length > 0 && (
+            <div className="public-main-item public-portfolio-item">
               <PublicPortfolio
                 projects={projects}
                 labels={{
@@ -136,10 +134,11 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                   openPdf: copy.public.openPdf,
                 }}
               />
+            </div>
             )}
 
-            {certificates.length > 0 && (
-              <section style={card}>
+          {certificates.length > 0 && (
+              <section className="public-main-item public-certificates-item" style={card}>
                 <div style={sectionTitle}>{copy.public.certificates}</div>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {certificates.map(certificate => (
@@ -162,10 +161,9 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 </div>
               </section>
             )}
-          </div>
 
           {hasSidebar && (
-            <aside style={{ display: 'grid', gap: 16 }}>
+            <aside className="public-sidebar" style={{ display: 'grid', gap: 16 }}>
               {hasActions && (
                 <section style={card}>
                   <div style={{ display: 'grid', gap: 10 }}>
