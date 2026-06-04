@@ -1,0 +1,138 @@
+'use client'
+
+import Link from 'next/link'
+import { useActionState } from 'react'
+import { createProfileAction, updateProfileAction } from '@/lib/actions'
+
+type ActionResult = { error?: string; success?: boolean } | undefined
+
+interface Profile {
+  id: string
+  title: string
+  public_slug: string
+  is_public: number
+  first_name: string
+  last_name: string
+  role: string
+  bio: string
+  skills: string
+  location: string
+  contact_email: string
+  website_url: string
+}
+
+export function ProfileForm({ profile }: { profile?: Profile }) {
+  const action = profile ? updateProfileAction : createProfileAction
+  const [state, formAction, pending] = useActionState<ActionResult, FormData>(action, undefined)
+
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius)', padding: '24px', maxWidth: 680,
+    }}>
+      {state?.error && (
+        <div style={{
+          background: 'var(--danger-bg)', color: 'var(--danger-text)',
+          padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+          fontSize: 13, marginBottom: 16,
+        }}>{state.error}</div>
+      )}
+
+      <form action={formAction}>
+        {profile && <input type="hidden" name="profileId" value={profile.id} />}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 12, alignItems: 'end', marginBottom: 16 }}>
+          <div>
+            <label>Название профиля *</label>
+            <input name="title" required placeholder="AI Automation Developer" defaultValue={profile?.title} />
+          </div>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: 'var(--surface2)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-sm)', padding: '9px 12px',
+            textTransform: 'none', letterSpacing: 0, margin: 0,
+          }}>
+            <input
+              type="checkbox"
+              name="is_public"
+              defaultChecked={profile ? profile.is_public === 1 : true}
+              style={{ width: 16, height: 16, padding: 0 }}
+            />
+            Публиковать
+          </label>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label>Публичная ссылка</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center' }}>
+            <span style={{
+              background: 'var(--surface2)', border: '0.5px solid var(--border)',
+              borderRight: 0, borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)',
+              padding: '9px 12px', color: 'var(--text3)', fontSize: 14,
+            }}>/p/</span>
+            <input
+              name="public_slug"
+              placeholder="ai-automation-developer"
+              defaultValue={profile?.public_slug}
+              style={{ borderRadius: '0 var(--radius-sm) var(--radius-sm) 0' }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label>Имя</label>
+            <input name="first_name" placeholder="Иван" defaultValue={profile?.first_name} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label>Фамилия</label>
+            <input name="last_name" placeholder="Иванов" defaultValue={profile?.last_name} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label>Роль / специализация</label>
+          <input name="role" placeholder="AI Engineer, Automation Specialist" defaultValue={profile?.role} />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label>Краткое описание</label>
+          <textarea name="bio" placeholder="Чем вы занимаетесь, какие задачи решаете, чем полезны клиенту или работодателю." defaultValue={profile?.bio} />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <label>Навыки через запятую</label>
+          <input name="skills" placeholder="Python, OpenAI API, Make.com, FastAPI" defaultValue={profile?.skills} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ marginBottom: 20 }}>
+            <label>Локация</label>
+            <input name="location" placeholder="Kyiv / Remote" defaultValue={profile?.location} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label>Контактный email</label>
+            <input type="email" name="contact_email" placeholder="you@example.com" defaultValue={profile?.contact_email} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link href={profile ? `/dashboard/profile/${profile.id}` : '/dashboard'} style={{
+            padding: '9px 20px', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-sm)', fontSize: 14, color: 'var(--text2)',
+            textDecoration: 'none',
+          }}>
+            Отмена
+          </Link>
+          <button type="submit" disabled={pending} style={{
+            background: 'var(--accent)', color: '#fff', border: 'none',
+            padding: '9px 24px', borderRadius: 'var(--radius-sm)',
+            fontSize: 14, fontWeight: 500, cursor: 'pointer',
+          }}>
+            {pending ? 'Сохранение...' : profile ? 'Сохранить изменения' : 'Создать профиль'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}

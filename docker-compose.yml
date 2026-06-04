@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3012:3000"
+    volumes:
+      - ./data:/app/data          # SQLite database
+      - ./uploads:/app/uploads    # User files
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production-use-32-chars-min}
+    restart: unless-stopped
